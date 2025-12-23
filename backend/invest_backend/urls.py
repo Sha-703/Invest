@@ -1,5 +1,6 @@
 from django.contrib import admin
 from django.urls import path, include
+from django.views.generic import RedirectView
 from rest_framework_simplejwt.views import (
     TokenObtainPairView,
     TokenRefreshView,
@@ -7,12 +8,13 @@ from rest_framework_simplejwt.views import (
 
 urlpatterns = [
     path('admin/', admin.site.urls),
+    # serve a simple favicon during development
+    path('favicon.ico', RedirectView.as_view(url='/static/favicon.svg')),
     path('api/', include('api.urls')),
     path('api/auth/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('api/auth/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
 ]
 
 # Custom error handlers
-# Note: Django only recognizes handler400/403/404/500 names. We point handler404
-# to our custom view which (per user request) returns HTTP 402 and renders a page.
-handler404 = 'invest_backend.views.custom_404'
+# Use the standard 404 page (status=404) to render a structured page for missing routes.
+handler404 = 'invest_backend.views.custom_404_standard'

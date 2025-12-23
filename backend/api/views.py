@@ -7,6 +7,11 @@ from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenRefreshView
+from django.contrib.auth.tokens import default_token_generator
+from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
+from django.utils.encoding import force_bytes, force_str
+from django.core.mail import send_mail
+from django.conf import settings
 
 from .models import MarketOffer, Wallet, Transaction, Deposit, Profile
 from .serializers import (
@@ -195,4 +200,70 @@ class LogoutView(APIView):
         resp = Response({'message': 'logged out'})
         # delete cookie
         resp.delete_cookie('refresh')
+        return resp
+
+
+class RegisterEmailView(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        from .serializers import RegisterEmailSerializer
+        serializer = RegisterEmailSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        user = serializer.save()
+
+        uid = urlsafe_base64_encode(force_bytes(user.pk))
+        token = default_token_generator.make_token(user)
+        frontend = getattr(settings, 'SITE_URL', 'http://localhost:5173')
+        verify_link = f"{frontend}/auth/verify/{uid}/{token}"
+
+        subject = "Vérifiez votre adresse e‑mail"
+        message = (
+            f"Bonjour,\n\nCliquez sur le lien suivant pour vérifier votre adresse e‑mail et activer votre compte:\n\n{verify_link}\n\n"
+            "Si vous n'avez pas demandé ceci, ignorez cet e‑mail."
+        )
+        send_mail(subject, message, getattr(settings, 'DEFAULT_FROM_EMAIL', None), [user.email], fail_silently=False)
+
+        return Response({'detail': 'E‑mail de vérification envoyé.'}, status=status.HTTP_201_CREATED)
+
+
+class VerifyEmailView(APIView):
+    permission_classes = [AllowAny]
+
+    def get(self, request, uidb64, token):
+        try:
+            uid = force_str(urlsafe_base64_decode(uidb64))
+            user = User.objects.get(pk=uid)
+        except Exception:
+            return Response({'detail': 'Lien invalide.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        if default_token_generator.check_token(user, token):
+            user.is_active = True
+            user.save()
+            # auto-login: create tokens and set refresh cookie
+            refresh = RefreshToken.for_user(user)
+            access_token = str(refresh.access_token)
+            refresh_token = str(refresh)
+            user_data = UserSerializer(user).data
+            resp = Response({'user': user_data, 'access_token': access_token}, status=status.HTTP_200_OK)
+            set_refresh_cookie(resp, refresh_token)
+            return resp
+        return Response({'detail': 'Lien expiré ou invalide.'}, status=status.HTTP_400_BAD_REQUEST)
+
+
+class SetPasswordView(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        from .serializers import SetPasswordSerializer
+        serializer = SetPasswordSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        user = serializer.save()
+        # after password set, optional auto-login
+        refresh = RefreshToken.for_user(user)
+        access_token = str(refresh.access_token)
+        refresh_token = str(refresh)
+        user_data = UserSerializer(user).data
+        resp = Response({'user': user_data, 'access_token': access_token}, status=status.HTTP_200_OK)
+        set_refresh_cookie(resp, refresh_token)
         return resp
