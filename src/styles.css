@@ -1,0 +1,8 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Fallback minimal styles */
+body { font-family: Inter, system-ui, Arial, sans-serif; margin: 0; padding: 0; }
+input { display:block; width:100%; padding:8px; margin:6px 0 12px 0 }
+button { padding:8px 12px; cursor:pointer }

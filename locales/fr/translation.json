@@ -1,0 +1,73 @@
+{
+  "login": {
+    "title": "Connexion",
+    "identifier": "Email ou téléphone",
+    "password": "Mot de passe",
+    "submit": "Se connecter",
+    "failed": "Échec de la connexion"
+  },
+  "register": {
+    "title": "Inscription",
+    "name": "Nom",
+    "email": "Email",
+    "phone": "Téléphone",
+    "password": "Mot de passe",
+    "submit": "S'inscrire",
+    "failed": "Échec de l'inscription"
+  },
+  "dashboard": {
+    "title": "Tableau de bord",
+    "welcome": "Bienvenue, {{name}}",
+    "summary": "Résumé rapide",
+    "loading": "Chargement des soldes...",
+    "total": "Total disponible",
+    "accounts": "Comptes",
+    "lastActivity": "Dernière activité",
+    "actions": "Actions rapides",
+    "viewWallets": "Voir portefeuilles",
+    "gotoMarket": "Aller au marché",
+    "deposit": "Dépôt",
+    "withdraw": "Retrait"
+  }
+  ,
+  "header": {
+    "dashboard": "Tableau de bord",
+    "wallets": "Portefeuilles",
+    "market": "Marché",
+    "deposits": "Dépôts",
+    "withdraw": "Retraits",
+    "logout": "Se déconnecter",
+    "guest": "Invité"
+  },
+  "notifications": {
+    "title": "Notifications",
+    "none": "Aucune notification"
+  },
+  "market": {
+    "title": "Marché",
+    "subtitle": "Liste des acheteurs et offres (à implémenter)"
+  },
+  "wallets": {
+    "title": "Mes portefeuilles",
+    "loading": "Chargement des soldes...",
+    "error": "Erreur lors du chargement des soldes",
+    "none": "Aucun portefeuille trouvé.",
+    "available": "Disponible",
+    "pending": "Pending",
+    "gains": "Gains",
+    "currencies": "{{count}} devises"
+  },
+  "deposits": {
+    "title": "Dépôts",
+    "amount": "Montant",
+    "method": "Méthode",
+    "initiate": "Initier dépôt",
+    "instructions": "Instructions",
+    "status": "Statut",
+    "error_initiate": "Erreur lors de l'initiation"
+  },
+  "withdraw": {
+    "title": "Retraits",
+    "subtitle": "Demander un retrait (à implémenter)"
+  }
+}
