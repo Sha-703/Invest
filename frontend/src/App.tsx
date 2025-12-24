@@ -5,6 +5,7 @@ import RegisterPage from './pages/RegisterPage'
 import DashboardPage from './pages/DashboardPage'
 import WalletsPage from './pages/WalletsPage'
 import MarketPage from './pages/MarketPage'
+import InvitePage from './pages/InvitePage'
 import DepositsPage from './pages/DepositsPage'
 import WithdrawPage from './pages/WithdrawPage'
 import Header from './components/Header'
@@ -13,7 +14,8 @@ import { useAuth } from './hooks/useAuth'
 import { useNotificationsSocket } from './hooks/useNotificationsSocket'
 
 function ProtectedRoute({ children }: { children: JSX.Element }) {
-  const { user } = useAuth()
+  const { user, loading } = useAuth()
+  if (loading) return null
   if (!user) return <Navigate to="/login" replace />
   return children
 }
@@ -51,6 +53,14 @@ export default function App() {
           element={
             <ProtectedRoute>
               <MarketPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/invite"
+          element={
+            <ProtectedRoute>
+              <InvitePage />
             </ProtectedRoute>
           }
         />

@@ -22,6 +22,7 @@ export default function Header() {
         <Link to="/dashboard">{t('header.dashboard')}</Link>
         <Link to="/wallets">{t('header.wallets')}</Link>
         <Link to="/market">{t('header.market')}</Link>
+        <Link to="/invite">Invité</Link>
         <Link to="/deposits">{t('header.deposits')}</Link>
         <Link to="/withdraw">{t('header.withdraw')}</Link>
         <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 12 }}>

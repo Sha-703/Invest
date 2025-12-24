@@ -6,6 +6,7 @@ type User = { id: string; name: string; email?: string | null; phone?: string | 
 
 type AuthContextValue = {
   user: User | null
+  loading: boolean
   setUser: (u: User | null) => void
   login: (identifier: string, password: string) => Promise<void>
   register: (payload: any) => Promise<void>
@@ -16,6 +17,7 @@ const AuthContext = createContext<AuthContextValue | undefined>(undefined)
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
+  const [loading, setLoading] = useState(true)
 
   // On mount try to load current user. If access token missing, backend may refresh via cookie.
   useEffect(() => {
@@ -34,6 +36,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           if (mounted) setUser(null)
         }
       }
+      if (mounted) setLoading(false)
     }
     bootstrap()
     return () => {
@@ -57,7 +60,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <AuthContext.Provider value={{ user, setUser, login, register, logout }}>
+    <AuthContext.Provider value={{ user, loading, setUser, login, register, logout }}>
       {children}
     </AuthContext.Provider>
   )

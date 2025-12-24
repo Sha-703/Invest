@@ -44,8 +44,9 @@ export const NotificationsProvider: React.FC<{ children: React.ReactNode }> = ({
       case 'warning':
         toast.warn(message)
         break
+      // do not show a toast popup for 'info' notifications by default
       default:
-        toast.info(message)
+        break
     }
   }, [])
 

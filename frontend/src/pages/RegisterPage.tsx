@@ -1,6 +1,6 @@
 import React from 'react'
 import { useTranslation } from 'react-i18next'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
 import { authService } from '../services/auth'
 import { useAuth } from '../hooks/useAuth'
@@ -10,12 +10,17 @@ type FormData = { name: string; email?: string; phone?: string; password: string
 export default function RegisterPage() {
   const { register, handleSubmit } = useForm<FormData>()
   const navigate = useNavigate()
+  const location = useLocation()
   const { setUser } = useAuth()
   const { t } = useTranslation()
 
   async function onSubmit(data: FormData) {
     try {
-      const res = await authService.register(data)
+      // include optional ref query param when present in URL
+      const params = new URLSearchParams(location.search)
+      const ref = params.get('ref')
+      const payload = ref ? { ...data, ref } : data
+      const res = await authService.register(payload)
       setUser(res.user)
       navigate('/dashboard')
     } catch (err) {
