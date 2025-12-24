@@ -3,9 +3,22 @@ from django.conf import settings
 
 
 class MarketOffer(models.Model):
-    title = models.CharField('titre', max_length=200)
+    STATUS_CHOICES = (
+        ('open', 'Ouvert'),
+        ('accepted', 'Accepté'),
+        ('cancelled', 'Annulé'),
+        ('expired', 'Expiré'),
+    )
+
+    seller = models.ForeignKey(settings.AUTH_USER_MODEL, verbose_name='vendeur', on_delete=models.CASCADE, related_name='market_offers', null=True, blank=True)
+    title = models.CharField('titre', max_length=200, blank=True)
     description = models.TextField('description', blank=True)
-    price = models.DecimalField('prix', max_digits=16, decimal_places=2)
+    amount_requested = models.DecimalField('montant demandé', max_digits=20, decimal_places=2)
+    price_offered = models.DecimalField('prix offert', max_digits=20, decimal_places=2)
+    surplus = models.DecimalField('surplus', max_digits=20, decimal_places=2, default=0)
+    source = models.CharField('source', max_length=32, default='virtual')
+    status = models.CharField('statut', max_length=32, choices=STATUS_CHOICES, default='open')
+    expires_at = models.DateTimeField('expire à', null=True, blank=True)
     created_at = models.DateTimeField('date de création', auto_now_add=True)
 
     class Meta:
@@ -13,7 +26,7 @@ class MarketOffer(models.Model):
         verbose_name_plural = 'offres de marché'
 
     def __str__(self):
-        return f"{self.title} - {self.price}"
+        return f"Offer {self.pk}: {self.amount_requested} -> {self.price_offered} ({self.status})"
 
 
 class Wallet(models.Model):
@@ -51,6 +64,7 @@ class Transaction(models.Model):
         ('deposit', 'Dépôt'),
         ('withdraw', 'Retrait'),
         ('trade', 'Échange'),
+        ('referral', 'Parrainage'),
     )
 
     wallet = models.ForeignKey(Wallet, verbose_name='portefeuille', on_delete=models.CASCADE, related_name='transactions')
@@ -87,3 +101,72 @@ class Deposit(models.Model):
 
     def __str__(self):
         return f"Dépôt {self.id} ({self.amount} {self.currency}) - {self.status}"
+
+
+class Trade(models.Model):
+    """Record of a market trade (acceptance of a virtual offer or matched order)."""
+    offer_id = models.CharField('offer id', max_length=128)
+    seller = models.ForeignKey(settings.AUTH_USER_MODEL, verbose_name='vendeur', on_delete=models.CASCADE, related_name='trades')
+    amount = models.DecimalField('montant demandé', max_digits=20, decimal_places=2)
+    price = models.DecimalField('prix offert', max_digits=20, decimal_places=2)
+    surplus = models.DecimalField('surplus', max_digits=20, decimal_places=2)
+    buyer_info = models.JSONField('acheteur', blank=True, null=True)
+    created_at = models.DateTimeField('date', auto_now_add=True)
+
+    class Meta:
+        verbose_name = 'trade'
+        verbose_name_plural = 'trades'
+
+    def __str__(self):
+        return f"Trade {self.id}: {self.seller} sold {self.amount} -> {self.price} (surplus {self.surplus})"
+
+
+class ReferralCode(models.Model):
+    """A referral code owned by a referrer user."""
+    code = models.CharField('code', max_length=64, unique=True)
+    referrer = models.OneToOneField(settings.AUTH_USER_MODEL, verbose_name='parrain', on_delete=models.CASCADE, related_name='referral_code')
+    created_at = models.DateTimeField('date de création', auto_now_add=True)
+
+    class Meta:
+        verbose_name = 'code de parrainage'
+        verbose_name_plural = 'codes de parrainage'
+
+    def __str__(self):
+        return f"{self.code} -> {self.referrer}"
+
+
+class Referral(models.Model):
+    STATUS = (
+        ('pending', 'Pending'),
+        ('used', 'Used'),
+        ('cancelled', 'Cancelled'),
+    )
+
+    code = models.ForeignKey(ReferralCode, verbose_name='code', on_delete=models.CASCADE, related_name='referrals')
+    referred_user = models.ForeignKey(settings.AUTH_USER_MODEL, verbose_name='filleul', on_delete=models.CASCADE, related_name='referred_by', null=True, blank=True)
+    created_at = models.DateTimeField('date', auto_now_add=True)
+    used_at = models.DateTimeField('utilisé le', null=True, blank=True)
+    status = models.CharField('statut', max_length=32, choices=STATUS, default='pending')
+    meta = models.JSONField('meta', null=True, blank=True)
+
+    class Meta:
+        verbose_name = 'parrainage'
+        verbose_name_plural = 'parrainages'
+
+    def __str__(self):
+        return f"Referral {self.id} code={self.code.code} -> {self.referred_user} ({self.status})"
+
+
+class ReferralReward(models.Model):
+    """Record of a reward paid to the referrer when a referral meets conditions."""
+    referral = models.ForeignKey(Referral, verbose_name='parrainage', on_delete=models.CASCADE, related_name='rewards')
+    amount = models.DecimalField('montant', max_digits=20, decimal_places=2)
+    transaction = models.ForeignKey(Transaction, verbose_name='transaction', on_delete=models.SET_NULL, null=True, blank=True)
+    created_at = models.DateTimeField('date', auto_now_add=True)
+
+    class Meta:
+        verbose_name = 'récompense de parrainage'
+        verbose_name_plural = 'récompenses de parrainage'
+
+    def __str__(self):
+        return f"Reward {self.id} {self.amount} for referral {self.referral_id}"

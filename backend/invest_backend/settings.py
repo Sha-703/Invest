@@ -94,6 +94,10 @@ USE_TZ = True
 STATIC_URL = '/static/'
 
 # Serve project-level static files during development
+from decimal import Decimal
+REFERRAL_MIN_DEPOSIT = Decimal('1000.00')
+REFERRAL_REWARD_AMOUNT = Decimal('1000.00')
+REFERRAL_REWARD_CURRENCY = 'Fc'
 STATICFILES_DIRS = [BASE_DIR / 'static']
 
 # Directory where `collectstatic` will collect static files for production

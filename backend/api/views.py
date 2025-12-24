@@ -10,12 +10,18 @@ from rest_framework_simplejwt.views import TokenRefreshView
 from django.contrib.auth.tokens import default_token_generator
 from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
 from django.utils.encoding import force_bytes, force_str
+from django.utils import timezone
 from django.core.mail import send_mail
 from django.conf import settings
 
 from .models import MarketOffer, Wallet, Transaction, Deposit, Investor
+from .models import ReferralCode, Referral
 from .serializers import (
     MarketOfferSerializer,
+    VirtualOfferSerializer,
+    TradeSerializer,
+    ReferralCodeSerializer,
+    ReferralSerializer,
     WalletSerializer,
     TransactionSerializer,
     DepositSerializer,
@@ -158,6 +164,7 @@ class RegisterView(APIView):
         email = request.data.get('email')
         phone = request.data.get('phone')
         password = request.data.get('password')
+        ref_code = request.data.get('ref')
 
         if not name or not password:
             return Response({'message': 'name and password required'}, status=status.HTTP_400_BAD_REQUEST)
@@ -172,6 +179,28 @@ class RegisterView(APIView):
 
         # create investor
         Investor.objects.create(user=user, phone=phone)
+
+        # create a referral code for this new user if not exists
+        try:
+            # generate a short unique code
+            import secrets
+
+            code = secrets.token_urlsafe(6)
+            # ensure uniqueness
+            while ReferralCode.objects.filter(code=code).exists():
+                code = secrets.token_urlsafe(6)
+            ReferralCode.objects.create(code=code, referrer=user)
+        except Exception:
+            pass
+
+        # if a referral code was provided, link the referral (mark pending)
+        if ref_code:
+            try:
+                rc = ReferralCode.objects.filter(code__iexact=ref_code).first()
+                if rc:
+                    Referral.objects.create(code=rc, referred_user=user, status='pending')
+            except Exception:
+                pass
 
         refresh = RefreshToken.for_user(user)
         access_token = str(refresh.access_token)
@@ -282,3 +311,170 @@ class MeView(APIView):
         user = request.user
         serializer = UserSerializer(user)
         return Response(serializer.data)
+
+
+class VirtualOffersView(APIView):
+    """Return up to 3 virtual buyer offers for the authenticated user's wallet.
+
+    Offers are generated on the fly (not persisted) and return amount requested,
+    price offered and surplus. This keeps the initial implementation simple.
+    """
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        from decimal import Decimal, ROUND_DOWN
+        from django.utils import timezone
+        import random
+
+        wallet = Wallet.objects.filter(user=request.user).first()
+        if not wallet:
+            return Response([], status=status.HTTP_200_OK)
+
+        balance = wallet.available or Decimal('0')
+        if balance <= Decimal('0'):
+            return Response([], status=status.HTTP_200_OK)
+        # Check for existing open virtual offers for this seller
+        now = timezone.now()
+        existing = MarketOffer.objects.filter(seller=request.user, source='virtual', status='open', expires_at__gt=now).order_by('created_at')
+        if existing.exists():
+            serializer = MarketOfferSerializer(existing, many=True)
+            return Response(serializer.data)
+
+        # determine up to 3 offer sizes based on balance
+        percents = [Decimal('0.2'), Decimal('0.4'), Decimal('0.6')]
+        offers = []
+        for i, pct in enumerate(percents):
+            if len(offers) >= 3:
+                break
+            amount = (balance * pct).quantize(Decimal('0.01'), rounding=ROUND_DOWN)
+            # skip negligible amounts
+            if amount < Decimal('100'):
+                continue
+            # random margin between 5% and 30%
+            margin_pct = Decimal(random.uniform(0.05, 0.30)).quantize(Decimal('0.0001'))
+            price = (amount * (Decimal('1') + margin_pct)).quantize(Decimal('0.01'), rounding=ROUND_DOWN)
+            surplus = (price - amount).quantize(Decimal('0.01'), rounding=ROUND_DOWN)
+            expires = now + timezone.timedelta(minutes=30)
+
+            mo = MarketOffer.objects.create(
+                seller=request.user,
+                title=f'Acheteur virtuel {chr(65 + i)}',
+                description='Offre virtuelle générée automatiquement',
+                amount_requested=amount,
+                price_offered=price,
+                surplus=surplus,
+                source='virtual',
+                status='open',
+                expires_at=expires,
+            )
+            offers.append(mo)
+
+        serializer = MarketOfferSerializer(offers, many=True)
+        return Response(serializer.data)
+
+
+class AcceptVirtualOfferView(APIView):
+    """Accept a persisted virtual offer by pk: perform balance checks and execute the trade atomically."""
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, pk=None):
+        from decimal import Decimal, ROUND_DOWN
+        from django.db import transaction
+
+        # find the offer
+        try:
+            offer = MarketOffer.objects.select_for_update().get(pk=pk, source='virtual')
+        except MarketOffer.DoesNotExist:
+            return Response({'message': 'offer not found'}, status=status.HTTP_404_NOT_FOUND)
+
+        if offer.status != 'open':
+            return Response({'message': 'offer not open'}, status=status.HTTP_400_BAD_REQUEST)
+
+        now = timezone.now()
+        if offer.expires_at and offer.expires_at <= now:
+            offer.status = 'expired'
+            offer.save()
+            return Response({'message': 'offer expired'}, status=status.HTTP_400_BAD_REQUEST)
+
+        wallet = Wallet.objects.filter(user=request.user).first()
+        if not wallet:
+            return Response({'message': 'wallet not found'}, status=status.HTTP_404_NOT_FOUND)
+
+        amount = offer.amount_requested
+        price = offer.price_offered
+
+        if price <= amount or amount <= Decimal('0'):
+            return Response({'message': 'invalid offer values'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Execute atomically with row lock
+        try:
+            with transaction.atomic():
+                w = Wallet.objects.select_for_update().get(pk=wallet.pk)
+                if w.available < amount:
+                    return Response({'message': 'insufficient balance'}, status=status.HTTP_400_BAD_REQUEST)
+                surplus = (price - amount).quantize(Decimal('0.01'), rounding=ROUND_DOWN)
+                w.available = (w.available - amount + price).quantize(Decimal('0.01'), rounding=ROUND_DOWN)
+                w.gains = (w.gains + surplus).quantize(Decimal('0.01'), rounding=ROUND_DOWN)
+                w.save()
+
+                # mark offer accepted
+                offer.status = 'accepted'
+                offer.save()
+
+                # record trade
+                from .models import Trade
+                trade = Trade.objects.create(
+                    offer_id=str(offer.pk),
+                    seller=request.user,
+                    amount=amount,
+                    price=price,
+                    surplus=surplus,
+                    buyer_info={'label': offer.title or 'Acheteur virtuel'},
+                )
+
+                Transaction.objects.create(wallet=w, amount=amount, type='trade')
+
+        except Exception as e:
+            return Response({'message': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+        serializer = TradeSerializer(trade)
+        return Response({'trade': serializer.data, 'new_balance': str(w.available)})
+
+
+class ReferralsMeView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        # ensure the user has a referral code (may have been created at registration)
+        rc = ReferralCode.objects.filter(referrer=request.user).first()
+        code_data = None
+        if not rc:
+            # create a referral code on-demand for existing users who registered before
+            import secrets
+            base = None
+            # attempt to create a unique code a few times
+            for _ in range(5):
+                candidate = secrets.token_urlsafe(6)
+                if not ReferralCode.objects.filter(code=candidate).exists():
+                    base = candidate
+                    break
+            if base is None:
+                # fallback to timestamp-based code
+                from django.utils import timezone
+                base = f"ref{int(timezone.now().timestamp())}"
+            rc = ReferralCode.objects.create(code=base, referrer=request.user)
+
+        if rc:
+            code_data = ReferralCodeSerializer(rc).data
+
+        # list referrals where this user's code was used
+        referrals = Referral.objects.filter(code__referrer=request.user).order_by('-created_at')
+        referrals_data = ReferralSerializer(referrals, many=True).data
+
+        stats = {
+            'total_referred': referrals.count(),
+            'used': referrals.filter(status='used').count(),
+            'pending': referrals.filter(status='pending').count(),
+        }
+
+        return Response({'code': code_data, 'referrals': referrals_data, 'stats': stats})

@@ -21,9 +21,23 @@ class UserSerializer(serializers.ModelSerializer):
 
 
 class MarketOfferSerializer(serializers.ModelSerializer):
+    seller = UserSerializer(read_only=True)
+
     class Meta:
         model = MarketOffer
-        fields = ('id', 'title', 'description', 'price', 'created_at')
+        fields = (
+            'id', 'seller', 'title', 'description', 'amount_requested', 'price_offered', 'surplus', 'source', 'status', 'expires_at', 'created_at'
+        )
+
+
+class VirtualOfferSerializer(serializers.Serializer):
+    id = serializers.CharField()
+    amount_requested = serializers.DecimalField(max_digits=20, decimal_places=2)
+    price_offered = serializers.DecimalField(max_digits=20, decimal_places=2)
+    surplus = serializers.DecimalField(max_digits=20, decimal_places=2)
+    expires_at = serializers.DateTimeField()
+    buyer_label = serializers.CharField()
+    source = serializers.CharField(default='virtual')
 
 
 class WalletSerializer(serializers.ModelSerializer):
@@ -51,6 +65,27 @@ class TransactionSerializer(serializers.ModelSerializer):
     class Meta:
         model = Transaction
         fields = ('id', 'wallet', 'amount', 'type', 'created_at')
+
+
+class TradeSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = __import__('api.models', fromlist=['Trade']).Trade
+        fields = ('id', 'offer_id', 'seller', 'amount', 'price', 'surplus', 'buyer_info', 'created_at')
+
+
+class ReferralCodeSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = __import__('api.models', fromlist=['ReferralCode']).ReferralCode
+        fields = ('id', 'code', 'referrer', 'created_at')
+
+
+class ReferralSerializer(serializers.ModelSerializer):
+    referred_user = UserSerializer(read_only=True)
+    code = ReferralCodeSerializer(read_only=True)
+
+    class Meta:
+        model = __import__('api.models', fromlist=['Referral']).Referral
+        fields = ('id', 'code', 'referred_user', 'status', 'created_at', 'used_at', 'meta')
 
 
 class RegisterEmailSerializer(serializers.Serializer):
