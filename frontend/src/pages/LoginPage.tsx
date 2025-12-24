@@ -30,7 +30,7 @@ export default function LoginPage() {
         <form onSubmit={handleSubmit(onSubmit)}>
           <div className="mb-4">
             <label className="block text-sm font-medium text-gray-700 ">{t('login.identifier')}</label>
-            <input className="mt-1 block w-full border rounded px-3 py-2" {...register('identifier')} />
+            <input className="mt-1 block w-full border rounded px-3 py-2 text-center" {...register('identifier')} />
           </div>
           <div className="mb-4">
             <label className="block text-sm font-medium text-gray-700">{t('login.password')}</label>
