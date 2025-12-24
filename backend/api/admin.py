@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import MarketOffer, Wallet, Transaction, Deposit, Profile
+from .models import MarketOffer, Wallet, Transaction, Deposit, Investor
 
 
 @admin.register(MarketOffer)
@@ -22,6 +22,6 @@ class DepositAdmin(admin.ModelAdmin):
     list_display = ('id', 'user', 'amount', 'currency', 'status', 'created_at')
 
 
-@admin.register(Profile)
-class ProfileAdmin(admin.ModelAdmin):
-    list_display = ('id', 'user', 'phone')
+@admin.register(Investor)
+class InvestorAdmin(admin.ModelAdmin):
+    list_display = ('id', 'user', 'phone', 'total_invested', 'portfolio_value', 'created_at')

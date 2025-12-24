@@ -1,7 +1,7 @@
 from rest_framework import serializers
 from django.contrib.auth.models import User
 from django.contrib.auth import get_user_model
-from .models import MarketOffer, Wallet, Transaction, Deposit, Profile
+from .models import MarketOffer, Wallet, Transaction, Deposit, Investor
 
 User = get_user_model()
 
@@ -15,7 +15,7 @@ class UserSerializer(serializers.ModelSerializer):
 
     def get_phone(self, obj):
         try:
-            return obj.profile.phone
+            return obj.investor.phone
         except Exception:
             return None
 
@@ -34,10 +34,10 @@ class WalletSerializer(serializers.ModelSerializer):
         fields = ('id', 'user', 'currency', 'available', 'pending', 'gains')
 
 
-class ProfileSerializer(serializers.ModelSerializer):
+class InvestorSerializer(serializers.ModelSerializer):
     class Meta:
-        model = Profile
-        fields = ('phone',)
+        model = Investor
+        fields = ('phone', 'total_invested', 'portfolio_value')
 
 
 class DepositSerializer(serializers.ModelSerializer):
@@ -70,9 +70,9 @@ class RegisterEmailSerializer(serializers.Serializer):
         user = DjangoUser.objects.create_user(username=username, email=email, password=password)
         user.is_active = False
         user.save()
-        # create profile placeholder
+        # create investor placeholder
         try:
-            Profile.objects.create(user=user)
+            Investor.objects.create(user=user)
         except Exception:
             pass
         return user

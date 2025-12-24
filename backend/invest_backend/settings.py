@@ -115,7 +115,17 @@ REST_FRAMEWORK = {
 }
 
 # CORS - allow frontend local dev
-CORS_ALLOW_ALL_ORIGINS = True
+# For security, don't use wildcard when the frontend sends credentials.
+# Allow only the dev frontend origin and allow credentials (cookies).
+CORS_ALLOW_ALL_ORIGINS = False  # Ensure this is set to False
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:5173",
+]
+CORS_ALLOW_CREDENTIALS = True
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:5173",
+]
+CORS_ALLOW_CREDENTIALS = True
 
 
 # Logging: write Django errors (500, etc.) to a file for diagnosis when DEBUG=False

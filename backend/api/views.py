@@ -13,7 +13,7 @@ from django.utils.encoding import force_bytes, force_str
 from django.core.mail import send_mail
 from django.conf import settings
 
-from .models import MarketOffer, Wallet, Transaction, Deposit, Profile
+from .models import MarketOffer, Wallet, Transaction, Deposit, Investor
 from .serializers import (
     MarketOfferSerializer,
     WalletSerializer,
@@ -130,7 +130,12 @@ class LoginView(APIView):
             try:
                 user = User.objects.get(email=identifier)
             except User.DoesNotExist:
-                user = None
+                    # try phone number via Investor
+                    try:
+                        inv = Investor.objects.get(phone=identifier)
+                        user = inv.user
+                    except Investor.DoesNotExist:
+                        user = None
 
         if user is None or not user.check_password(password):
             return Response({'message': 'invalid credentials'}, status=status.HTTP_401_UNAUTHORIZED)
@@ -138,9 +143,9 @@ class LoginView(APIView):
         refresh = RefreshToken.for_user(user)
         access_token = str(refresh.access_token)
         refresh_token = str(refresh)
-
         user_data = UserSerializer(user).data
-        resp = Response({'user': user_data, 'access_token': access_token})
+        # include refresh token in response body for development convenience
+        resp = Response({'user': user_data, 'access_token': access_token, 'refresh_token': refresh_token})
         set_refresh_cookie(resp, refresh_token)
         return resp
 
@@ -165,15 +170,14 @@ class RegisterView(APIView):
         user.set_password(password)
         user.save()
 
-        # create profile
-        Profile.objects.create(user=user, phone=phone)
+        # create investor
+        Investor.objects.create(user=user, phone=phone)
 
         refresh = RefreshToken.for_user(user)
         access_token = str(refresh.access_token)
         refresh_token = str(refresh)
-
         user_data = UserSerializer(user).data
-        resp = Response({'user': user_data, 'access_token': access_token})
+        resp = Response({'user': user_data, 'access_token': access_token, 'refresh_token': refresh_token})
         set_refresh_cookie(resp, refresh_token)
         return resp
 
@@ -182,14 +186,15 @@ class RefreshTokenFromCookieView(APIView):
     permission_classes = [AllowAny]
 
     def post(self, request):
-        refresh_token = request.COOKIES.get('refresh')
+        # Accept refresh token from cookie (httpOnly) or from JSON body (dev convenience)
+        refresh_token = request.COOKIES.get('refresh') or request.data.get('refresh') or request.data.get('token')
         if not refresh_token:
             return Response({'message': 'no refresh token'}, status=status.HTTP_401_UNAUTHORIZED)
         try:
             token = RefreshToken(refresh_token)
             access = str(token.access_token)
             return Response({'access_token': access})
-        except Exception as e:
+        except Exception:
             return Response({'message': 'invalid token'}, status=status.HTTP_401_UNAUTHORIZED)
 
 
@@ -245,7 +250,7 @@ class VerifyEmailView(APIView):
             access_token = str(refresh.access_token)
             refresh_token = str(refresh)
             user_data = UserSerializer(user).data
-            resp = Response({'user': user_data, 'access_token': access_token}, status=status.HTTP_200_OK)
+            resp = Response({'user': user_data, 'access_token': access_token, 'refresh_token': refresh_token}, status=status.HTTP_200_OK)
             set_refresh_cookie(resp, refresh_token)
             return resp
         return Response({'detail': 'Lien expiré ou invalide.'}, status=status.HTTP_400_BAD_REQUEST)
@@ -264,6 +269,16 @@ class SetPasswordView(APIView):
         access_token = str(refresh.access_token)
         refresh_token = str(refresh)
         user_data = UserSerializer(user).data
-        resp = Response({'user': user_data, 'access_token': access_token}, status=status.HTTP_200_OK)
+        resp = Response({'user': user_data, 'access_token': access_token, 'refresh_token': refresh_token}, status=status.HTTP_200_OK)
         set_refresh_cookie(resp, refresh_token)
         return resp
+
+
+class MeView(APIView):
+    """Return the current authenticated user."""
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        user = request.user
+        serializer = UserSerializer(user)
+        return Response(serializer.data)

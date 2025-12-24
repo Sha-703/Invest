@@ -31,16 +31,19 @@ class Wallet(models.Model):
         return f"Portefeuille {self.id} ({self.user}) - {self.currency}"
 
 
-class Profile(models.Model):
-    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='profile')
+class Investor(models.Model):
+    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='investor')
     phone = models.CharField('téléphone', max_length=32, blank=True, null=True)
+    total_invested = models.DecimalField('total investi', max_digits=20, decimal_places=2, default=0)
+    portfolio_value = models.DecimalField('valeur du portefeuille', max_digits=20, decimal_places=2, default=0)
+    created_at = models.DateTimeField('date de création', auto_now_add=True)
 
     class Meta:
-        verbose_name = 'profil'
-        verbose_name_plural = 'profils'
+        verbose_name = 'investisseur'
+        verbose_name_plural = 'investisseurs'
 
     def __str__(self):
-        return f"Profil {self.user.username}"
+        return f"Investisseur {self.user.username}"
 
 
 class Transaction(models.Model):

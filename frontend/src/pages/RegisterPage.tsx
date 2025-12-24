@@ -11,6 +11,7 @@ export default function RegisterPage() {
   const { register, handleSubmit } = useForm<FormData>()
   const navigate = useNavigate()
   const { setUser } = useAuth()
+  const { t } = useTranslation()
 
   async function onSubmit(data: FormData) {
     try {

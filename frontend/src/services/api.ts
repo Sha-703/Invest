@@ -6,6 +6,10 @@ let authToken: string | null = null
 
 export function setAuthToken(token: string | null) {
   authToken = token
+  try {
+    if (token) localStorage.setItem('access_token', token)
+    else localStorage.removeItem('access_token')
+  } catch (e) {}
 }
 
 const api = axios.create({
@@ -13,6 +17,12 @@ const api = axios.create({
   headers: { 'Content-Type': 'application/json' },
   withCredentials: true
 })
+
+// Initialize authToken from localStorage so page reloads keep the session (dev convenience)
+try {
+  const stored = localStorage.getItem('access_token')
+  if (stored) authToken = stored
+} catch (e) {}
 
 // Attach Authorization header from module-scoped token
 api.interceptors.request.use((config: AxiosRequestConfig) => {

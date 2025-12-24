@@ -87,3 +87,92 @@ Traceback (most recent call last):
     raise ZoneInfoNotFoundError(f"No time zone found with key {key}")
 zoneinfo._common.ZoneInfoNotFoundError: 'No time zone found with key Afrique/Kinshasa'
 "GET /admin/login/?next=/admin/ HTTP/1.1" 500 3287
+Internal Server Error: /admin/api/profile/
+Traceback (most recent call last):
+  File "C:\Users\Sharia Longo\AppData\Roaming\Python\Python313\site-packages\django\db\backends\utils.py", line 105, in _execute
+    return self.cursor.execute(sql, params)
+           ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^
+  File "C:\Users\Sharia Longo\AppData\Roaming\Python\Python313\site-packages\django\db\backends\sqlite3\base.py", line 359, in execute
+    return super().execute(query, params)
+           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^
+sqlite3.OperationalError: no such table: api_profile
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "C:\Users\Sharia Longo\AppData\Roaming\Python\Python313\site-packages\django\core\handlers\exception.py", line 55, in inner
+    response = get_response(request)
+  File "C:\Users\Sharia Longo\AppData\Roaming\Python\Python313\site-packages\django\core\handlers\base.py", line 198, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+  File "C:\Users\Sharia Longo\AppData\Roaming\Python\Python313\site-packages\django\contrib\admin\options.py", line 710, in wrapper
+    return self.admin_site.admin_view(view)(*args, **kwargs)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "C:\Users\Sharia Longo\AppData\Roaming\Python\Python313\site-packages\django\utils\decorators.py", line 192, in _view_wrapper
+    result = _process_exception(request, e)
+  File "C:\Users\Sharia Longo\AppData\Roaming\Python\Python313\site-packages\django\utils\decorators.py", line 190, in _view_wrapper
+    response = view_func(request, *args, **kwargs)
+  File "C:\Users\Sharia Longo\AppData\Roaming\Python\Python313\site-packages\django\views\decorators\cache.py", line 80, in _view_wrapper
+    response = view_func(request, *args, **kwargs)
+  File "C:\Users\Sharia Longo\AppData\Roaming\Python\Python313\site-packages\django\contrib\admin\sites.py", line 247, in inner
+    return view(request, *args, **kwargs)
+  File "C:\Users\Sharia Longo\AppData\Roaming\Python\Python313\site-packages\django\utils\decorators.py", line 48, in _wrapper
+    return bound_method(*args, **kwargs)
+  File "C:\Users\Sharia Longo\AppData\Roaming\Python\Python313\site-packages\django\utils\decorators.py", line 192, in _view_wrapper
+    result = _process_exception(request, e)
+  File "C:\Users\Sharia Longo\AppData\Roaming\Python\Python313\site-packages\django\utils\decorators.py", line 190, in _view_wrapper
+    response = view_func(request, *args, **kwargs)
+  File "C:\Users\Sharia Longo\AppData\Roaming\Python\Python313\site-packages\django\contrib\admin\options.py", line 1982, in changelist_view
+    cl = self.get_changelist_instance(request)
+  File "C:\Users\Sharia Longo\AppData\Roaming\Python\Python313\site-packages\django\contrib\admin\options.py", line 857, in get_changelist_instance
+    return ChangeList(
+        request,
+    ...<12 lines>...
+        self.search_help_text,
+    )
+  File "C:\Users\Sharia Longo\AppData\Roaming\Python\Python313\site-packages\django\contrib\admin\views\main.py", line 143, in __init__
+    self.get_results(request)
+    ~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\Sharia Longo\AppData\Roaming\Python\Python313\site-packages\django\contrib\admin\views\main.py", line 300, in get_results
+    result_count = paginator.count
+                   ^^^^^^^^^^^^^^^
+  File "C:\Users\Sharia Longo\AppData\Roaming\Python\Python313\site-packages\django\utils\functional.py", line 47, in __get__
+    res = instance.__dict__[self.name] = self.func(instance)
+                                         ~~~~~~~~~^^^^^^^^^^
+  File "C:\Users\Sharia Longo\AppData\Roaming\Python\Python313\site-packages\django\core\paginator.py", line 189, in count
+    return c()
+  File "C:\Users\Sharia Longo\AppData\Roaming\Python\Python313\site-packages\django\db\models\query.py", line 610, in count
+    return self.query.get_count(using=self.db)
+           ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^
+  File "C:\Users\Sharia Longo\AppData\Roaming\Python\Python313\site-packages\django\db\models\sql\query.py", line 651, in get_count
+    return obj.get_aggregation(using, {"__count": Count("*")})["__count"]
+           ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Sharia Longo\AppData\Roaming\Python\Python313\site-packages\django\db\models\sql\query.py", line 633, in get_aggregation
+    result = compiler.execute_sql(SINGLE)
+  File "C:\Users\Sharia Longo\AppData\Roaming\Python\Python313\site-packages\django\db\models\sql\compiler.py", line 1624, in execute_sql
+    cursor.execute(sql, params)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^
+  File "C:\Users\Sharia Longo\AppData\Roaming\Python\Python313\site-packages\django\db\backends\utils.py", line 122, in execute
+    return super().execute(sql, params)
+           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^
+  File "C:\Users\Sharia Longo\AppData\Roaming\Python\Python313\site-packages\django\db\backends\utils.py", line 79, in execute
+    return self._execute_with_wrappers(
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        sql, params, many=False, executor=self._execute
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\Sharia Longo\AppData\Roaming\Python\Python313\site-packages\django\db\backends\utils.py", line 92, in _execute_with_wrappers
+    return executor(sql, params, many, context)
+  File "C:\Users\Sharia Longo\AppData\Roaming\Python\Python313\site-packages\django\db\backends\utils.py", line 100, in _execute
+    with self.db.wrap_database_errors:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Sharia Longo\AppData\Roaming\Python\Python313\site-packages\django\db\utils.py", line 94, in __exit__
+    raise dj_exc_value.with_traceback(traceback) from exc_value
+  File "C:\Users\Sharia Longo\AppData\Roaming\Python\Python313\site-packages\django\db\backends\utils.py", line 105, in _execute
+    return self.cursor.execute(sql, params)
+           ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^
+  File "C:\Users\Sharia Longo\AppData\Roaming\Python\Python313\site-packages\django\db\backends\sqlite3\base.py", line 359, in execute
+    return super().execute(query, params)
+           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^
+django.db.utils.OperationalError: no such table: api_profile
+"GET /admin/api/profile/ HTTP/1.1" 500 206329

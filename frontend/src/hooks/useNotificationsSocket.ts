@@ -7,7 +7,8 @@ export function useNotificationsSocket(opts?: { url?: string; token?: string }) 
   const wsRef = useRef<WebSocket | null>(null)
 
   useEffect(() => {
-    const url = opts?.url ?? (window.location.protocol === 'https:' ? 'wss://' : 'ws://') + window.location.host + '/ws/notifications'
+    // default WS URL should point to backend dev server
+    const url = opts?.url ?? (window.location.protocol === 'https:' ? 'wss://' : 'ws://') + 'localhost:8000' + '/ws/notifications'
     const connector = opts?.token ? `${url}?token=${encodeURIComponent(opts.token)}` : url
     const ws = new WebSocket(connector)
     wsRef.current = ws

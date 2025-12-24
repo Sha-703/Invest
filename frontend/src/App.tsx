@@ -24,9 +24,10 @@ export default function App() {
   useNotificationsSocket({ token: (user as any)?.token })
 
   return (
-    <div>
+    <div className="min-h-screen flex flex-col bg-gray-50">
       <Header />
-      <Routes>
+      <main className="flex-1">
+        <Routes>
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
         <Route
@@ -70,7 +71,8 @@ export default function App() {
           }
         />
         <Route path="/" element={<Navigate to="/login" replace />} />
-      </Routes>
+        </Routes>
+      </main>
       <Footer />
     </div>
   )

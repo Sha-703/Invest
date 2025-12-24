@@ -12,52 +12,57 @@ export default function DashboardPage() {
   const notify = useNotify()
 
   const wallets = data?.wallets || data || []
-
   const totalAvailable = wallets.reduce((acc: number, w: any) => acc + Number(w.available || 0), 0)
 
   return (
-    <div style={{ maxWidth: 960, margin: '40px auto' }}>
-      <h1>{t('dashboard.title')}</h1>
-      <p>{t('dashboard.welcome', { name: user?.name ?? 'Utilisateur' })}</p>
+    <div className="max-w-6xl mx-auto px-6 py-10">
+      <header className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-semibold text-gray-900">{t('dashboard.title')}</h1>
+          <p className="text-sm text-gray-600 mt-1">{t('dashboard.welcome', { name: (user as any)?.first_name || (user as any)?.username || 'Investisseur' })}</p>
+        </div>
+        <div className="text-right">
+          <div className="text-xs text-gray-500">Solde total disponible</div>
+          <div className="text-2xl font-bold text-green-600">{totalAvailable.toLocaleString()}</div>
+        </div>
+      </header>
 
-      <section style={{ marginTop: 20 }}>
-        <h2>{t('dashboard.summary')}</h2>
-        {isLoading ? (
-          <div>{t('dashboard.loading')}</div>
-        ) : (
-          <div style={{ display: 'flex', gap: 12 }}>
-            <div style={{ padding: 12, border: '1px solid #eee', minWidth: 180 }}>
-              <div style={{ fontSize: 12, color: '#666' }}>{t('dashboard.total')}</div>
-              <div style={{ fontSize: 20, fontWeight: 600 }}>{totalAvailable}</div>
-            </div>
-            <div style={{ padding: 12, border: '1px solid #eee', minWidth: 180 }}>
-              <div style={{ fontSize: 12, color: '#666' }}>{t('dashboard.accounts')}</div>
-              <div>{wallets.length} devises</div>
-            </div>
-            <div style={{ padding: 12, border: '1px solid #eee', minWidth: 180 }}>
-              <div style={{ fontSize: 12, color: '#666' }}>{t('dashboard.lastActivity')}</div>
-              <div>—</div>
-            </div>
-          </div>
-        )}
+      <section className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="bg-white border rounded-lg p-5 shadow-sm">
+          <div className="text-xs text-gray-500">Total disponible</div>
+          <div className="mt-2 text-xl font-semibold text-gray-900">{totalAvailable.toLocaleString()}</div>
+          <div className="mt-3 text-sm text-gray-600">Résumé de vos liquidités</div>
+        </div>
+
+        <div className="bg-white border rounded-lg p-5 shadow-sm">
+          <div className="text-xs text-gray-500">Comptes / Portefeuilles</div>
+          <div className="mt-2 text-xl font-semibold text-gray-900">{wallets.length}</div>
+          <div className="mt-3 text-sm text-gray-600">Nombre de devises actives</div>
+        </div>
+
+        <div className="bg-white border rounded-lg p-5 shadow-sm">
+          <div className="text-xs text-gray-500">Dernière activité</div>
+          <div className="mt-2 text-xl font-semibold text-gray-900">—</div>
+          <div className="mt-3 text-sm text-gray-600">Aucune activité récente</div>
+        </div>
       </section>
 
-      <section style={{ marginTop: 20 }}>
-        <h2>{t('dashboard.actions')}</h2>
-        <div style={{ display: 'flex', gap: 12 }}>
-          <Link to="/wallets">
-            <button>{t('dashboard.viewWallets')}</button>
+      <section className="mt-8 bg-white border rounded-lg p-6 shadow-sm">
+        <h2 className="text-lg font-medium text-gray-900">Actions rapides</h2>
+        <div className="mt-4 flex flex-wrap gap-3">
+          <Link to="/wallets" className="inline-block">
+            <button className="px-4 py-2 bg-blue-600 text-white rounded shadow-sm hover:bg-blue-700">{t('dashboard.viewWallets')}</button>
           </Link>
-          <Link to="/market">
-            <button>{t('dashboard.gotoMarket')}</button>
+          <Link to="/market" className="inline-block">
+            <button className="px-4 py-2 bg-indigo-600 text-white rounded shadow-sm hover:bg-indigo-700">{t('dashboard.gotoMarket')}</button>
           </Link>
-          <Link to="/deposits">
-            <button>{t('dashboard.deposit')}</button>
+          <Link to="/deposits" className="inline-block">
+            <button className="px-4 py-2 bg-green-600 text-white rounded shadow-sm hover:bg-green-700">{t('dashboard.deposit')}</button>
           </Link>
-          <Link to="/withdraw">
-            <button>{t('dashboard.withdraw')}</button>
+          <Link to="/withdraw" className="inline-block">
+            <button className="px-4 py-2 bg-yellow-500 text-white rounded shadow-sm hover:bg-yellow-600">{t('dashboard.withdraw')}</button>
           </Link>
-          <button onClick={() => notify.info('Ceci est une notification de test', 'Test')}>Tester notification</button>
+          <button onClick={() => notify.info('Ceci est une notification de test', 'Test')} className="px-4 py-2 border rounded text-gray-700 hover:bg-gray-50">Tester notification</button>
         </div>
       </section>
     </div>
