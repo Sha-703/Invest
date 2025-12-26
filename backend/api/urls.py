@@ -14,6 +14,7 @@ urlpatterns = [
     path('market/offers', views.MarketOfferViewSet.as_view({'get': 'list'}), name='market-offers-list'),
     path('market/offers/<int:pk>', views.MarketOfferViewSet.as_view({'get': 'retrieve'}), name='market-offers-detail'),
     path('market/virtual-offers', views.VirtualOffersView.as_view(), name='market-virtual-offers'),
+    path('market/buyers', views.BuyersListView.as_view(), name='market-buyers'),
     path('market/virtual-offers/<int:pk>/accept', views.AcceptVirtualOfferView.as_view(), name='market-virtual-accept'),
     path('referrals/me', views.ReferralsMeView.as_view(), name='referrals-me'),
 

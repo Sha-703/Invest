@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useCallback } from 'react'
-import { toast } from 'react-toastify'
+// react-toastify usage removed; keep notifications in context
 
 export type NotificationItem = {
   id: string
@@ -32,22 +32,10 @@ export const NotificationsProvider: React.FC<{ children: React.ReactNode }> = ({
     const notif = { ...n, id: n.id || String(Date.now()), read: n.read ?? false, date: n.date ?? new Date().toISOString() }
     setNotifications((prev) => [notif, ...prev])
 
-    // show toast
-    const message = notif.title ? `${notif.title} — ${notif.body}` : notif.body
-    switch (notif.type) {
-      case 'success':
-        toast.success(message)
-        break
-      case 'error':
-        toast.error(message)
-        break
-      case 'warning':
-        toast.warn(message)
-        break
-      // do not show a toast popup for 'info' notifications by default
-      default:
-        break
-    }
+    // NOTE: toast popups are intentionally disabled to avoid showing messages
+    // at the bottom of the app for user actions. Notifications are still
+    // stored in the `notifications` array and can be rendered in a UI
+    // component if desired.
   }, [])
 
   const markRead = useCallback((id: string) => {

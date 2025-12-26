@@ -13,6 +13,10 @@ from django.utils.encoding import force_bytes, force_str
 from django.utils import timezone
 from django.core.mail import send_mail
 from django.conf import settings
+from django.db.models import Count, Avg, Max
+import logging
+
+logger = logging.getLogger(__name__)
 
 from .models import MarketOffer, Wallet, Transaction, Deposit, Investor
 from .models import ReferralCode, Referral
@@ -32,9 +36,26 @@ User = get_user_model()
 
 
 class MarketOfferViewSet(viewsets.ModelViewSet):
-    queryset = MarketOffer.objects.all().order_by('-created_at')
     serializer_class = MarketOfferSerializer
     permission_classes = [AllowAny]
+
+    def get_queryset(self):
+        qs = MarketOffer.objects.all().order_by('-created_at')
+        # optional filters via query params
+        status = self.request.query_params.get('status')
+        source = self.request.query_params.get('source')
+        seller = self.request.query_params.get('seller')
+        if status:
+            qs = qs.filter(status=status)
+        if source:
+            qs = qs.filter(source=source)
+        if seller:
+            # allow numeric user id or username
+            if seller.isdigit():
+                qs = qs.filter(seller__id=int(seller))
+            else:
+                qs = qs.filter(seller__username__iexact=seller)
+        return qs
 
 
 class WalletViewSet(viewsets.ModelViewSet):
@@ -46,6 +67,61 @@ class WalletViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         serializer.save(user=self.request.user)
+
+    @action(detail=True, methods=['post'], permission_classes=[IsAuthenticated])
+    def transfer_gains(self, request, pk=None):
+        """Transfer amount from wallet.gains to wallet.available for the owner."""
+        from decimal import Decimal, ROUND_DOWN
+        from django.db import transaction
+
+        amount = request.data.get('amount')
+        source = request.data.get('source', 'gains')
+        if amount is None:
+            return Response({'message': "Le montant est requis"}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            amt = Decimal(str(amount))
+        except Exception:
+            return Response({'message': 'Montant invalide'}, status=status.HTTP_400_BAD_REQUEST)
+
+        if amt <= Decimal('0'):
+            return Response({'message': 'Le montant doit être positif'}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            logger.debug('transfer_gains request: wallet=%s user=%s raw_amount=%s source=%s', pk, getattr(request.user, 'id', None), amount, source)
+            with transaction.atomic():
+                w = Wallet.objects.select_for_update().get(pk=pk, user=request.user)
+                logger.debug('wallet before transfer: id=%s available=%s gains=%s sale_balance=%s', w.pk, w.available, w.gains, getattr(w, 'sale_balance', None))
+
+                if source == 'gains':
+                    if w.gains < amt:
+                        return Response({'message': 'Gains insuffisants'}, status=status.HTTP_400_BAD_REQUEST)
+                    w.gains = (w.gains - amt).quantize(Decimal('0.01'), rounding=ROUND_DOWN)
+                    w.available = (w.available + amt).quantize(Decimal('0.01'), rounding=ROUND_DOWN)
+                elif source == 'sale':
+                    # transfer from sale_balance
+                    try:
+                        sb = w.sale_balance
+                    except Exception:
+                        sb = None
+                    if sb is None or sb < amt:
+                        return Response({'message': "Solde de vente insuffisant"}, status=status.HTTP_400_BAD_REQUEST)
+                    w.sale_balance = (w.sale_balance - amt).quantize(Decimal('0.01'), rounding=ROUND_DOWN)
+                    w.available = (w.available + amt).quantize(Decimal('0.01'), rounding=ROUND_DOWN)
+                else:
+                    return Response({'message': 'source invalide'}, status=status.HTTP_400_BAD_REQUEST)
+
+                w.save()
+
+                Transaction.objects.create(wallet=w, amount=amt, type='transfer')
+
+                return Response(WalletSerializer(w).data)
+        except Wallet.DoesNotExist:
+            return Response({'message': 'Portefeuille non trouvé'}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            # Log unexpected server error and return a safe message
+            logger.exception('transfer_gains failed for wallet %s user %s', pk, request.user)
+            return Response({'message': "Erreur serveur interne"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 class TransactionViewSet(viewsets.ModelViewSet):
@@ -177,8 +253,24 @@ class RegisterView(APIView):
         user.set_password(password)
         user.save()
 
-        # create investor
-        Investor.objects.create(user=user, phone=phone)
+        # ensure an Investor record exists for this new user
+        try:
+            Investor.objects.create(user=user, phone=phone)
+            investor_created = True
+        except Exception:
+            investor_created = False
+
+        # create default wallets for the new investor if none exist
+        wallets_created = []
+        try:
+            default_currencies = getattr(settings, 'DEFAULT_WALLETS', ['XAF'])
+            for cur in default_currencies:
+                if not Wallet.objects.filter(user=user, currency=cur).exists():
+                    w = Wallet.objects.create(user=user, currency=cur)
+                    wallets_created.append(w.currency)
+        except Exception:
+            # swallow wallet creation errors but continue
+            wallets_created = []
 
         # create a referral code for this new user if not exists
         try:
@@ -193,12 +285,14 @@ class RegisterView(APIView):
         except Exception:
             pass
 
-        # if a referral code was provided, link the referral (mark pending)
+        # if a referral code was provided, link the referral.
+        # We mark it as 'used' immediately and record the timestamp so the referrer sees the new referred user.
         if ref_code:
             try:
                 rc = ReferralCode.objects.filter(code__iexact=ref_code).first()
                 if rc:
-                    Referral.objects.create(code=rc, referred_user=user, status='pending')
+                    from django.utils import timezone as _tz
+                    Referral.objects.create(code=rc, referred_user=user, status='used', used_at=_tz.now())
             except Exception:
                 pass
 
@@ -206,7 +300,7 @@ class RegisterView(APIView):
         access_token = str(refresh.access_token)
         refresh_token = str(refresh)
         user_data = UserSerializer(user).data
-        resp = Response({'user': user_data, 'access_token': access_token, 'refresh_token': refresh_token})
+        resp = Response({'user': user_data, 'access_token': access_token, 'refresh_token': refresh_token, 'investor_created': investor_created})
         set_refresh_cookie(resp, refresh_token)
         return resp
 
@@ -325,6 +419,7 @@ class VirtualOffersView(APIView):
         from decimal import Decimal, ROUND_DOWN
         from django.utils import timezone
         import random
+        from .models import Trade
 
         wallet = Wallet.objects.filter(user=request.user).first()
         if not wallet:
@@ -333,18 +428,30 @@ class VirtualOffersView(APIView):
         balance = wallet.available or Decimal('0')
         if balance <= Decimal('0'):
             return Response([], status=status.HTTP_200_OK)
-        # Check for existing open virtual offers for this seller
+        # Enforce daily limit: max 3 trades per seller per day
         now = timezone.now()
-        existing = MarketOffer.objects.filter(seller=request.user, source='virtual', status='open', expires_at__gt=now).order_by('created_at')
+        trades_today = Trade.objects.filter(seller=request.user, created_at__date=now.date()).count()
+        if trades_today >= 3:
+            return Response([], status=status.HTTP_200_OK)
+
+        # Check for existing open virtual offers for this seller created today
+        existing = MarketOffer.objects.filter(
+            seller=request.user,
+            source='virtual',
+            status='open',
+            expires_at__gt=now,
+            created_at__date=now.date(),
+        ).order_by('created_at')
         if existing.exists():
             serializer = MarketOfferSerializer(existing, many=True)
             return Response(serializer.data)
 
-        # determine up to 3 offer sizes based on balance
+        # determine up to remaining offers based on balance (max 3 per day)
+        remaining = 3 - trades_today
         percents = [Decimal('0.2'), Decimal('0.4'), Decimal('0.6')]
         offers = []
         for i, pct in enumerate(percents):
-            if len(offers) >= 3:
+            if len(offers) >= remaining:
                 break
             amount = (balance * pct).quantize(Decimal('0.01'), rounding=ROUND_DOWN)
             # skip negligible amounts
@@ -413,8 +520,15 @@ class AcceptVirtualOfferView(APIView):
                 if w.available < amount:
                     return Response({'message': 'insufficient balance'}, status=status.HTTP_400_BAD_REQUEST)
                 surplus = (price - amount).quantize(Decimal('0.01'), rounding=ROUND_DOWN)
-                w.available = (w.available - amount + price).quantize(Decimal('0.01'), rounding=ROUND_DOWN)
+                # deduct the sold amount from available, credit surplus to gains
+                w.available = (w.available - amount).quantize(Decimal('0.01'), rounding=ROUND_DOWN)
                 w.gains = (w.gains + surplus).quantize(Decimal('0.01'), rounding=ROUND_DOWN)
+                # credit the sale proceeds to sale_balance (we store sold AMOUNT as sale balance)
+                try:
+                    w.sale_balance = (w.sale_balance + amount).quantize(Decimal('0.01'), rounding=ROUND_DOWN)
+                except Exception:
+                    # if sale_balance doesn't exist (migration not applied), initialize it
+                    w.sale_balance = amount.quantize(Decimal('0.01'), rounding=ROUND_DOWN)
                 w.save()
 
                 # mark offer accepted
@@ -439,6 +553,69 @@ class AcceptVirtualOfferView(APIView):
 
         serializer = TradeSerializer(trade)
         return Response({'trade': serializer.data, 'new_balance': str(w.available)})
+
+
+class BuyersListView(APIView):
+    """Aggregate buyers from virtual MarketOffers and recorded Trades.
+
+    Returns a list of buyer entries with sample last offer/trade and basic stats.
+    """
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+        from .models import Trade
+
+        buyers = []
+
+        # virtual buyers aggregated by title
+        virtual_groups = (
+            MarketOffer.objects.filter(source='virtual')
+            .values('title')
+            .annotate(total_offers=Count('id'), avg_price=Avg('price_offered'), last_created=Max('created_at'))
+            .order_by('-last_created')
+        )
+
+        for g in virtual_groups:
+            title = g.get('title')
+            latest = MarketOffer.objects.filter(source='virtual', title=title).order_by('-created_at').first()
+            buyers.append({
+                'label': title or 'Acheteur virtuel',
+                'source': 'virtual',
+                'total_offers': g.get('total_offers') or 0,
+                'avg_price': str(g.get('avg_price')) if g.get('avg_price') is not None else None,
+                'last_offer': MarketOfferSerializer(latest).data if latest else None,
+            })
+
+        # real buyers aggregated from trades' buyer_info.label when available
+        trade_qs = Trade.objects.exclude(buyer_info__isnull=True).order_by('-created_at')
+        trade_map = {}
+        for t in trade_qs:
+            info = t.buyer_info or {}
+            label = info.get('label') or info.get('name') or 'Acheteur'
+            entry = trade_map.get(label)
+            if not entry:
+                trade_map[label] = {
+                    'label': label,
+                    'source': 'trade',
+                    'total_trades': 1,
+                    'avg_price': t.price,
+                    'last_trade': TradeSerializer(t).data,
+                }
+            else:
+                entry['total_trades'] += 1
+                # update avg_price incrementally
+                try:
+                    entry['avg_price'] = (entry['avg_price'] * (entry['total_trades'] - 1) + t.price) / entry['total_trades']
+                except Exception:
+                    entry['avg_price'] = t.price
+                # keep last_trade as the most recent (we iterate in desc order)
+
+        # convert avg_price to string for JSON serialization
+        for v in trade_map.values():
+            v['avg_price'] = str(v['avg_price']) if v.get('avg_price') is not None else None
+            buyers.append(v)
+
+        return Response(buyers)
 
 
 class ReferralsMeView(APIView):

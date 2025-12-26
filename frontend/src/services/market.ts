@@ -15,6 +15,11 @@ export async function fetchVirtualOffers(params?: any) {
   return res.data
 }
 
+export async function fetchBuyers(params?: any) {
+  const res = await api.get('/market/buyers', { params })
+  return res.data
+}
+
 export async function acceptVirtualOffer(id: number) {
   const res = await api.post(`/market/virtual-offers/${id}/accept`)
   return res.data

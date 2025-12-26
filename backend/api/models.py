@@ -31,10 +31,11 @@ class MarketOffer(models.Model):
 
 class Wallet(models.Model):
     user = models.ForeignKey(settings.AUTH_USER_MODEL, verbose_name='utilisateur', on_delete=models.CASCADE, related_name='wallets')
-    currency = models.CharField('devise', max_length=10, default='XAF')
+    currency = models.CharField('devise', max_length=10, default='CDF')
     available = models.DecimalField('disponible', max_digits=20, decimal_places=2, default=0)
     pending = models.DecimalField('en attente', max_digits=20, decimal_places=2, default=0)
     gains = models.DecimalField('gains', max_digits=20, decimal_places=2, default=0)
+    sale_balance = models.DecimalField('solde de vente', max_digits=20, decimal_places=2, default=0)
 
     class Meta:
         verbose_name = 'portefeuille'
@@ -65,6 +66,7 @@ class Transaction(models.Model):
         ('withdraw', 'Retrait'),
         ('trade', 'Échange'),
         ('referral', 'Parrainage'),
+        ('transfer', 'Transfert'),
     )
 
     wallet = models.ForeignKey(Wallet, verbose_name='portefeuille', on_delete=models.CASCADE, related_name='transactions')

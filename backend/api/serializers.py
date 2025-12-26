@@ -45,7 +45,7 @@ class WalletSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Wallet
-        fields = ('id', 'user', 'currency', 'available', 'pending', 'gains')
+        fields = ('id', 'user', 'currency', 'available', 'pending', 'gains', 'sale_balance')
 
 
 class InvestorSerializer(serializers.ModelSerializer):
@@ -77,6 +77,17 @@ class ReferralCodeSerializer(serializers.ModelSerializer):
     class Meta:
         model = __import__('api.models', fromlist=['ReferralCode']).ReferralCode
         fields = ('id', 'code', 'referrer', 'created_at')
+
+
+class BuyerSerializer(serializers.Serializer):
+    """Representation for an aggregated buyer entry (virtual or real)."""
+    label = serializers.CharField()
+    source = serializers.CharField()
+    total_offers = serializers.IntegerField(required=False)
+    total_trades = serializers.IntegerField(required=False)
+    avg_price = serializers.DecimalField(max_digits=20, decimal_places=2, required=False, allow_null=True)
+    last_offer = MarketOfferSerializer(required=False, allow_null=True)
+    last_trade = TradeSerializer(required=False, allow_null=True)
 
 
 class ReferralSerializer(serializers.ModelSerializer):

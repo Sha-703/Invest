@@ -27,9 +27,11 @@
     "viewWallets": "Voir portefeuilles",
     "gotoMarket": "Aller au marché",
     "deposit": "Dépôt",
-    "withdraw": "Retrait"
-  }
-  ,
+    "withdraw": "Retrait",
+    "sale_balance": "Solde de vente",
+    "sale_balance_desc": "Montant reçu par ventes (bloqué)",
+    "gains_card": "Gains accumulés"
+  },
   "header": {
     "dashboard": "Tableau de bord",
     "wallets": "Portefeuilles",
@@ -55,6 +57,14 @@
     "available": "Disponible",
     "pending": "Pending",
     "gains": "Gains",
+    "sale_balance": "Solde de vente",
+    "transfer_success": "Transfert effectué",
+    "transfer_error": "Erreur lors du transfert",
+    "invalid_amount": "Montant invalide",
+    "insufficient_gains": "Gains insuffisants",
+    "insufficient_sale": "Solde de vente insuffisant",
+    "transfer_source_gains": "Gains",
+    "transfer_source_sale": "Solde de vente",
     "currencies": "{{count}} devises"
   },
   "deposits": {

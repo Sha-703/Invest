@@ -12,6 +12,8 @@ export default function DashboardPage() {
   const notify = useNotify()
 
   const wallets = data?.wallets || data || []
+  const totalSale = wallets.reduce((acc: number, w: any) => acc + Number(w.sale_balance || 0), 0)
+  const totalGains = wallets.reduce((acc: number, w: any) => acc + Number(w.gains || 0), 0)
   const totalAvailable = wallets.reduce((acc: number, w: any) => acc + Number(w.available || 0), 0)
 
   return (
@@ -23,15 +25,20 @@ export default function DashboardPage() {
         </div>
         <div className="text-right">
           <div className="text-xs text-gray-500">Solde total disponible</div>
-          <div className="text-2xl font-bold text-green-600">{totalAvailable.toLocaleString()}</div>
+          <div className="text-2xl font-bold text-green-600">{Number(totalAvailable || 0).toLocaleString()}</div>
         </div>
       </header>
 
       <section className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="bg-white border rounded-lg p-5 shadow-sm">
-          <div className="text-xs text-gray-500">Total disponible</div>
-          <div className="mt-2 text-xl font-semibold text-gray-900">{totalAvailable.toLocaleString()}</div>
-          <div className="mt-3 text-sm text-gray-600">Résumé de vos liquidités</div>
+          <div className="text-xs text-gray-500">Gains accumulés</div>
+          <div className="mt-2 text-xl font-semibold text-gray-900">{totalGains.toLocaleString()}</div>
+          <div className="mt-3 text-sm text-gray-600">Gains provenant des ventes (non disponibles)</div>
+        </div>
+        <div className="bg-white border rounded-lg p-5 shadow-sm">
+          <div className="text-xs text-gray-500">{t('dashboard.sale_balance')}</div>
+          <div className="mt-2 text-xl font-semibold text-gray-900">{totalSale.toLocaleString()}</div>
+          <div className="mt-3 text-sm text-gray-600">{t('dashboard.sale_balance_desc')}</div>
         </div>
 
         <div className="bg-white border rounded-lg p-5 shadow-sm">
