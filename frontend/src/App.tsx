@@ -5,13 +5,14 @@ import RegisterPage from './pages/RegisterPage'
 import DashboardPage from './pages/DashboardPage'
 import WalletsPage from './pages/WalletsPage'
 import MarketPage from './pages/MarketPage'
-import InvitePage from './pages/InvitePage'
+//import InvitePage from './pages/InvitePage'
 import DepositsPage from './pages/DepositsPage'
 import WithdrawPage from './pages/WithdrawPage'
-import Header from './components/Header'
+//import Header from './components/HeaderActions'
 import Footer from './components/Footer'
 import { useAuth } from './hooks/useAuth'
 import { useNotificationsSocket } from './hooks/useNotificationsSocket'
+import HeaderActions from './components/HeaderActions'
 
 function ProtectedRoute({ children }: { children: JSX.Element }) {
   const { user, loading } = useAuth()
@@ -27,7 +28,6 @@ export default function App() {
 
   return (
     <div className="min-h-screen flex flex-col bg-gray-50">
-      <Header />
       <main className="flex-1">
         <Routes>
         <Route path="/login" element={<LoginPage />} />
@@ -56,14 +56,7 @@ export default function App() {
             </ProtectedRoute>
           }
         />
-        <Route
-          path="/invite"
-          element={
-            <ProtectedRoute>
-              <InvitePage />
-            </ProtectedRoute>
-          }
-        />
+        
         <Route
           path="/deposits"
           element={
