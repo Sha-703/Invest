@@ -1,74 +1,82 @@
 import React, { useState, useEffect } from 'react'
 import api from '../services/api'
-import { useTranslation } from 'react-i18next'
-
-type InitiateResponse = {
-  deposit_id: string
-  instructions: any
-  status: string
-}
 
 export default function DepositsPage() {
-  const { t } = useTranslation()
-  const [amount, setAmount] = useState<string>('')
-  const [method, setMethod] = useState<string>('wallet')
-  const [result, setResult] = useState<InitiateResponse | null>(null)
+  const [amount, setAmount] = useState('')
+  const [method, setMethod] = useState('')
+  const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [polling, setPolling] = useState(false)
+  const [result, setResult] = useState<any>(null)
+
+  const isValid = Number(amount) > 0 && method
 
   async function initiate() {
+    if (!isValid) return
+    setLoading(true)
     setError(null)
+
     try {
-      const res = await api.post('/deposits/initiate', { method, amount: Number(amount), currency: 'XAF' })
+      const res = await api.post('/deposits/initiate', {
+        amount: Number(amount),
+        method,
+        currency: 'XAF',
+      })
       setResult(res.data)
-      setPolling(true)
     } catch (e: any) {
-      setError(e?.response?.data?.message || 'Erreur lors de l\'initiation')
+      setError(e?.response?.data?.message || 'Erreur lors du dépôt')
+    } finally {
+      setLoading(false)
     }
   }
 
-  useEffect(() => {
-    let timer: any
-    async function pollStatus() {
-      if (!result || !polling) return
-      try {
-        const res = await api.get(`/deposits/${result.deposit_id}/status`)
-        if (res.data.status && res.data.status !== 'pending' && res.data.status !== 'awaiting_payment') {
-          setResult((r) => (r ? { ...r, status: res.data.status } : r))
-          setPolling(false)
-        } else {
-          timer = setTimeout(pollStatus, 3000)
-        }
-      } catch (e) {
-        timer = setTimeout(pollStatus, 5000)
-      }
-    }
-    pollStatus()
-    return () => clearTimeout(timer)
-  }, [result, polling])
-
   return (
-    <div style={{ maxWidth: 960, margin: '40px auto' }}>
-      <h1>{t('deposits.title')}</h1>
-      <div style={{ maxWidth: 400 }}>
-        <label>{t('deposits.amount')}</label>
-        <input value={amount} onChange={(e) => setAmount(e.target.value)} />
-        <label>{t('deposits.method')}</label>
-        <select value={method} onChange={(e) => setMethod(e.target.value)}>
-          <option value="wallet">Wallet</option>
-          <option value="provider_x">Provider X</option>
-        </select>
-        <div style={{ marginTop: 12 }}>
-          <button onClick={initiate} disabled={!amount}>{t('deposits.initiate')}</button>
+    <div className="max-w-5xl mx-auto p-6">
+      <h1 className="text-2xl font-semibold text-center mb-8">Dépôt des fonds</h1>
+
+      <div className="bg-white rounded-xl shadow p-6 max-w-xl mx-auto space-y-4">
+        <div>
+          <label className="block text-sm font-medium mb-1">Montant</label>
+          <input
+            value={amount}
+            onChange={(e) => setAmount(e.target.value)}
+            className="w-full border rounded-lg p-2"
+          />
         </div>
-        {error && <div style={{ color: 'red', marginTop: 8 }}>{error}</div>}
+
+        <div>
+          <label className="block text-sm font-medium mb-1">Méthode</label>
+          <select
+            value={method}
+            onChange={(e) => setMethod(e.target.value)}
+            className="w-full border rounded-lg p-2"
+          >
+            <option value="">-- Sélectionner --</option>
+            <option value="orange">Orange Money</option>
+            <option value="mpesa">M-pesa</option>
+            <option value="airtel">Airtel Money</option>
+          </select>
+        </div>
+
+        {error && <p className="text-red-600 text-sm">{error}</p>}
+
+        <button
+          onClick={initiate}
+          disabled={!isValid || loading}
+          className={`w-full py-2 rounded-lg font-semibold text-white
+            ${loading || !isValid
+              ? 'bg-green-300 cursor-not-allowed'
+              : 'bg-green-600 hover:bg-green-700'}`}
+        >
+          {loading ? 'Traitement...' : 'Effectuer le dépôt'}
+        </button>
       </div>
 
       {result && (
-        <div style={{ marginTop: 20, border: '1px solid #eee', padding: 12 }}>
-          <h3>{t('deposits.instructions')}</h3>
-          <pre style={{ whiteSpace: 'pre-wrap' }}>{JSON.stringify(result.instructions || result, null, 2)}</pre>
-          <div>{t('deposits.status')}: {result.status}</div>
+        <div className="mt-8 bg-white rounded-xl shadow p-6 max-w-xl mx-auto">
+          <h2 className="font-semibold mb-2">Instructions</h2>
+          <pre className="text-sm bg-gray-100 p-3 rounded">
+            {JSON.stringify(result, null, 2)}
+          </pre>
         </div>
       )}
     </div>

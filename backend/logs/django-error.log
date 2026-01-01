@@ -4230,3 +4230,81 @@ Traceback (most recent call last):
     )
 RuntimeError: You called this URL via POST, but the URL doesn't end in a slash and you have APPEND_SLASH set. Django can't redirect to the slash URL while maintaining POST data. Change your form to point to localhost:8000/api/wallets/4/transfer_gains/ (note the trailing slash), or set APPEND_SLASH=False in your Django settings.
 "POST /api/wallets/4/transfer_gains HTTP/1.1" 500 21640
+Internal Server Error: /admin/auth/user/
+Traceback (most recent call last):
+  File "/home/martin-lub/Invest/backend/venv/lib/python3.13/site-packages/django/db/models/fields/related_descriptors.py", line 241, in __get__
+    rel_obj = self.field.get_cached_value(instance)
+  File "/home/martin-lub/Invest/backend/venv/lib/python3.13/site-packages/django/db/models/fields/mixins.py", line 21, in get_cached_value
+    return instance._state.fields_cache[self.cache_name]
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+KeyError: 'user'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/home/martin-lub/Invest/backend/venv/lib/python3.13/site-packages/django/core/handlers/exception.py", line 55, in inner
+    response = get_response(request)
+  File "/home/martin-lub/Invest/backend/venv/lib/python3.13/site-packages/django/core/handlers/base.py", line 198, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+  File "/home/martin-lub/Invest/backend/venv/lib/python3.13/site-packages/django/contrib/admin/options.py", line 710, in wrapper
+    return self.admin_site.admin_view(view)(*args, **kwargs)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "/home/martin-lub/Invest/backend/venv/lib/python3.13/site-packages/django/utils/decorators.py", line 192, in _view_wrapper
+    result = _process_exception(request, e)
+  File "/home/martin-lub/Invest/backend/venv/lib/python3.13/site-packages/django/utils/decorators.py", line 190, in _view_wrapper
+    response = view_func(request, *args, **kwargs)
+  File "/home/martin-lub/Invest/backend/venv/lib/python3.13/site-packages/django/views/decorators/cache.py", line 80, in _view_wrapper
+    response = view_func(request, *args, **kwargs)
+  File "/home/martin-lub/Invest/backend/venv/lib/python3.13/site-packages/django/contrib/admin/sites.py", line 247, in inner
+    return view(request, *args, **kwargs)
+  File "/home/martin-lub/Invest/backend/venv/lib/python3.13/site-packages/django/utils/decorators.py", line 48, in _wrapper
+    return bound_method(*args, **kwargs)
+  File "/home/martin-lub/Invest/backend/venv/lib/python3.13/site-packages/django/utils/decorators.py", line 192, in _view_wrapper
+    result = _process_exception(request, e)
+  File "/home/martin-lub/Invest/backend/venv/lib/python3.13/site-packages/django/utils/decorators.py", line 190, in _view_wrapper
+    response = view_func(request, *args, **kwargs)
+  File "/home/martin-lub/Invest/backend/venv/lib/python3.13/site-packages/django/contrib/admin/options.py", line 2039, in changelist_view
+    response = self.response_action(
+        request, queryset=cl.get_queryset(request)
+    )
+  File "/home/martin-lub/Invest/backend/venv/lib/python3.13/site-packages/django/contrib/admin/options.py", line 1644, in response_action
+    response = func(self, request, queryset)
+  File "/home/martin-lub/Invest/backend/venv/lib/python3.13/site-packages/django/contrib/admin/actions.py", line 40, in delete_selected
+    ) = modeladmin.get_deleted_objects(queryset, request)
+        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^
+  File "/home/martin-lub/Invest/backend/venv/lib/python3.13/site-packages/django/contrib/admin/options.py", line 2157, in get_deleted_objects
+    return get_deleted_objects(objs, request, self.admin_site)
+  File "/home/martin-lub/Invest/backend/venv/lib/python3.13/site-packages/django/contrib/admin/utils.py", line 175, in get_deleted_objects
+    to_delete = collector.nested(format_callback)
+  File "/home/martin-lub/Invest/backend/venv/lib/python3.13/site-packages/django/contrib/admin/utils.py", line 242, in nested
+    roots.extend(self._nested(root, seen, format_callback))
+                 ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/martin-lub/Invest/backend/venv/lib/python3.13/site-packages/django/contrib/admin/utils.py", line 226, in _nested
+    children.extend(self._nested(child, seen, format_callback))
+                    ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/martin-lub/Invest/backend/venv/lib/python3.13/site-packages/django/contrib/admin/utils.py", line 226, in _nested
+    children.extend(self._nested(child, seen, format_callback))
+                    ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/martin-lub/Invest/backend/venv/lib/python3.13/site-packages/django/contrib/admin/utils.py", line 228, in _nested
+    ret = [format_callback(obj)]
+           ~~~~~~~~~~~~~~~^^^^^
+  File "/home/martin-lub/Invest/backend/venv/lib/python3.13/site-packages/django/contrib/admin/utils.py", line 148, in format_callback
+    no_edit_link = "%s: %s" % (capfirst(opts.verbose_name), obj)
+                                                            ^^^
+  File "/home/martin-lub/Invest/backend/api/models.py", line 82, in __str__
+    return f"{self.get_type_display()} {self.amount} -> {self.wallet}"
+                                                        ^^^^^^^^^^^^^
+  File "/home/martin-lub/Invest/backend/api/models.py", line 45, in __str__
+    return f"Portefeuille {self.id} ({self.user}) - {self.currency}"
+                                      ^^^^^^^^^
+  File "/home/martin-lub/Invest/backend/venv/lib/python3.13/site-packages/django/db/models/fields/related_descriptors.py", line 257, in __get__
+    rel_obj = self.get_object(instance)
+  File "/home/martin-lub/Invest/backend/venv/lib/python3.13/site-packages/django/db/models/fields/related_descriptors.py", line 222, in get_object
+    return qs.get(self.field.get_reverse_related_filter(instance))
+           ~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/martin-lub/Invest/backend/venv/lib/python3.13/site-packages/django/db/models/query.py", line 639, in get
+    raise self.model.DoesNotExist(
+        "%s matching query does not exist." % self.model._meta.object_name
+    )
+django.contrib.auth.models.User.DoesNotExist: User matching query does not exist.
+"POST /admin/auth/user/ HTTP/1.1" 500 199114

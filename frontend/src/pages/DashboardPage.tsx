@@ -1,14 +1,16 @@
-import React from 'react'
+import React, { useState } from 'react'
 import { useAuth } from '../hooks/useAuth'
 import { useQuery } from '@tanstack/react-query'
 import { fetchMyReferrals } from '../services/referrals'
 import { useNotify } from '../hooks/useNotify'
+import { useNavigate } from 'react-router-dom'
 import BottomNav from '../components/BottomNav'
 import HeaderActions from '../components/HeaderActions'
 
 export default function DashboardPage() {
   const { user } = useAuth()
   const notify = useNotify()
+  const navigate = useNavigate()
 
   const { data } = useQuery(['my_referrals'], fetchMyReferrals)
 
@@ -19,6 +21,16 @@ export default function DashboardPage() {
     ? `${window.location.origin}/register?ref=${code}`
     : ''
 
+  /* ================= STATES ================= */
+  const [showCompleteModal, setShowCompleteModal] = useState(false)
+  const [showInvestModal, setShowInvestModal] = useState(false)
+  const [showGainModal, setShowGainModal] = useState(false)
+  const [showVipModal, setShowVipModal] = useState(false)
+
+  const [loadingComplete, setLoadingComplete] = useState(false)
+  const [loadingConfirmGain, setLoadingConfirmGain] = useState(false)
+
+  /* ================= ACTIONS ================= */
   async function onCopy() {
     if (!inviteLink) {
       notify.error('Aucun code disponible')
@@ -52,85 +64,190 @@ export default function DashboardPage() {
       {/* HEADER */}
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-2">
-          <div className="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center">
-          
-          </div>
+          <div className="w-8 h-8 bg-gray-300 rounded-full" />
           <span className="font-semibold">Logo</span>
         </div>
         <h1 className="font-semibold text-lg">Profil</h1>
-        {/* Actions */}
         <HeaderActions />
       </div>
 
       {/* PROFIL */}
       <div className="bg-white rounded-2xl p-5 shadow mb-6">
         <div className="flex items-center gap-4">
-          <div className="w-12 h-12 rounded-full bg-gray-200 flex items-center justify-center">
-            👤
-          </div>
-
+          <div className="w-12 h-12 rounded-full bg-gray-200 flex items-center justify-center">👤</div>
           <div className="flex-1">
-            <div className="font-semibold">
-              {user?.first_name || user?.username}
-            </div>
-            <div className="text-sm text-gray-500">{user?.phone ?? '+243 *********'}</div>
+            <div className="font-semibold">{user?.first_name || user?.username}</div>
+            <div className="text-sm text-gray-500">{user?.phone ?? '+243 *********'} </div>
             <div className="text-sm text-gray-500">{user?.email}</div>
           </div>
-
-          <span className="px-3 py-1 text-xs rounded-full bg-purple-600 text-white">
-            VIP {user?.vip_level ?? '10'}
-          </span>
+          <button
+            onClick={() => setShowVipModal(true)}
+            className="px-3 py-1 text-xs rounded-full bg-purple-600 text-white"
+          >
+            VIP {user?.vip_level ?? 1}
+          </button>
         </div>
+      </div>
+
+      {/* COMPLETER INFOS */}
+      <div className="bg-yellow-50 border border-yellow-200 rounded-2xl p-5 mb-6">
+        <div className="flex justify-between items-center">
+          <p className="text-sm text-yellow-800 font-medium">
+            Veuillez compléter les informations de votre compte
+          </p>
+          <button
+            onClick={() => setShowCompleteModal(true)}
+            className="px-4 py-1.5 text-sm rounded-lg bg-yellow-500 text-white"
+          >
+            Complétez
+          </button>
+        </div>
+      </div>
+
+      {/* MES INVESTISSEMENTS */}
+      <div className="bg-white rounded-2xl p-5 shadow mb-6">
+        <div className="flex justify-between items-center">
+          <h2 className="font-semibold">Mes Investissements</h2>
+          <button
+            onClick={() => setShowInvestModal(true)}
+            className="text-sm text-purple-600 hover:underline"
+          >
+            Voir →
+          </button>
+        </div>
+        <p className="text-sm text-gray-500 mt-2">
+          Consultez les investissements auxquels vous avez adhéré.
+        </p>
       </div>
 
       {/* CODE PARRAINAGE */}
       <div className="bg-white rounded-2xl p-5 shadow mb-6">
         <div className="text-sm text-gray-500 mb-2">Code Parrainage</div>
-
-        <div className="flex items-center justify-between gap-2">
+        <div className="flex justify-between items-center">
           <span className="font-bold text-lg">{code ?? '—'}</span>
-
           <div className="flex gap-2">
-            <button
-              onClick={onCopy}
-              className="px-3 py-1 border rounded-lg text-sm"
-            >
-              Copiez
-            </button>
-            <button
-              onClick={onShare}
-              className="px-3 py-1 border rounded-lg text-sm"
-            >
-              Partager
-            </button>
+            <button onClick={onCopy} className="px-3 py-1 border rounded-lg text-sm">Copier</button>
+            <button onClick={onShare} className="px-3 py-1 border rounded-lg text-sm">Partager</button>
           </div>
         </div>
       </div>
 
-      {/* MON ÉQUIPE */}
+      {/* MON EQUIPE */}
       <div className="bg-white rounded-2xl p-5 shadow mb-6">
         <h2 className="font-semibold mb-3">Mon équipe</h2>
-
         <div className="space-y-2 text-sm">
-          <div className="flex justify-between">
-            <span>Compte VIP 7</span>
-            <span>{stats.vip7 ?? 0}</span>
-          </div>
-          <div className="flex justify-between">
-            <span>Compte VIP 5</span>
-            <span>{stats.vip5 ?? 0}</span>
-          </div>
+          <div className="flex justify-between"><span>VIP 7</span><span>{stats.vip7 ?? 0}</span></div>
+          <div className="flex justify-between"><span>VIP 5</span><span>{stats.vip5 ?? 0}</span></div>
         </div>
       </div>
 
-      {/* NOTICE */}
-      <div className="bg-white rounded-2xl p-5 shadow mb-10">
-        <h2 className="font-semibold mb-2">Notice Sur le Parrainage</h2>
-        <p className="text-sm text-gray-600">
-          Lorem ipsum dolor sit amet, consectetur adipiscing elit,
-          sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.
-        </p>
-      </div>
+      {/* ================= MODALS ================= */}
+
+      {/* MODAL COMPLETER */}
+      {showCompleteModal && (
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center px-4">
+          <div className="bg-white rounded-2xl w-full max-w-md p-6 space-y-3">
+            <h2 className="font-semibold text-lg">Compléter les informations</h2>
+
+            <select className="w-full border rounded-lg p-2">
+              <option>Votre banque</option>
+              <option>Orange Money</option>
+              <option>M-Pesa</option>
+              <option>Airtel Money</option>
+            </select>
+
+            <input className="w-full border rounded-lg p-2" placeholder="Numéro de compte" />
+            <input className="w-full border rounded-lg p-2" placeholder="Nom enregistré au compte" />
+
+            <div className="bg-yellow-50 text-sm text-yellow-800 p-3 rounded-lg">
+              Ces informations sont nécessaires pour vos retraits.
+            </div>
+
+            <button
+              disabled={loadingComplete}
+              onClick={async () => {
+                setLoadingComplete(true)
+                await new Promise(res => setTimeout(res, 2000))
+                setLoadingComplete(false)
+                setShowCompleteModal(false)
+                notify.success('Informations complétées')
+              }}
+              className={`w-full py-2 rounded-lg text-white
+                ${loadingComplete ? 'bg-yellow-300' : 'bg-yellow-500 hover:bg-yellow-600'}`}
+            >
+              {loadingComplete ? 'Traitement...' : 'Je complète'}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL INVESTISSEMENTS */}
+      {showInvestModal && (
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center px-4">
+          <div className="bg-white rounded-2xl w-full max-w-md p-6 space-y-4">
+            <h2 className="font-semibold text-lg">Mes investissements</h2>
+
+            <div className="border p-3 rounded-lg">
+              <div className="font-semibold">Plan Croissance Or</div>
+              <div className="text-sm text-gray-500">Gain journalier : 1 500 FC</div>
+              <button
+                onClick={() => setShowGainModal(true)}
+                className="mt-2 text-sm text-green-600 underline"
+              >
+                Encaisser
+              </button>
+            </div>
+
+            <button
+              onClick={() => setShowInvestModal(false)}
+              className="w-full py-2 bg-purple-600 text-white rounded-lg"
+            >
+              Fermer
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL GAIN */}
+      {showGainModal && (
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center px-4">
+          <div className="bg-white rounded-2xl w-full max-w-md p-6 space-y-4">
+            <p>Voulez-vous encaisser vos gains journaliers ?</p>
+            <button
+              disabled={loadingConfirmGain}
+              onClick={async () => {
+                setLoadingConfirmGain(true)
+                await new Promise(res => setTimeout(res, 2000))
+                setLoadingConfirmGain(false)
+                setShowGainModal(false)
+                notify.success('Gains encaissés')
+              }}
+              className={`w-full py-2 rounded-lg text-white
+                ${loadingConfirmGain ? 'bg-green-300' : 'bg-green-600 hover:bg-green-700'}`}
+            >
+              {loadingConfirmGain ? 'Traitement...' : 'Confirmer'}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL VIP */}
+      {showVipModal && (
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center px-4">
+          <div className="bg-white rounded-2xl w-full max-w-md p-6 space-y-3">
+            <h2 className="font-semibold text-lg">Niveaux VIP</h2>
+            {[...Array(10)].map((_, i) => (
+              <p key={i}>VIP {i + 1} – Avantages progressifs</p>
+            ))}
+            <button
+              onClick={() => setShowVipModal(false)}
+              className="w-full py-2 bg-purple-600 text-white rounded-lg"
+            >
+              Fermer
+            </button>
+          </div>
+        </div>
+      )}
 
       <BottomNav />
     </div>
