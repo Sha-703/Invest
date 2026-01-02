@@ -111,7 +111,10 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 # Django REST Framework + JWT config
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
-        'rest_framework_simplejwt.authentication.JWTAuthentication',
+        # Use an authentication class that treats invalid tokens as absent
+        # so public endpoints (e.g. /auth/register) are not blocked by
+        # a stale or malformed Authorization header coming from the client.
+        'api.authentication.OptionalJWTAuthentication',
     ),
     'DEFAULT_PERMISSION_CLASSES': (
         'rest_framework.permissions.AllowAny',
@@ -158,3 +161,10 @@ LOGGING = {
 EMAIL_BACKEND = os.environ.get('DJANGO_EMAIL_BACKEND', 'django.core.mail.backends.console.EmailBackend')
 DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', 'no-reply@example.com')
 SITE_URL = os.environ.get('SITE_URL', 'http://localhost:5173')
+
+# VIP configuration: by default compute VIP from the user's portfolio
+# (sum of available + invested + gains) when True. When False, VIP is
+# computed from the invested balance only.
+VIP_USE_PORTFOLIO = True
+# Default currency used when none is detected from country code
+DEFAULT_CURRENCY = 'CDF'

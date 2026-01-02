@@ -8,16 +8,38 @@ User = get_user_model()
 
 class UserSerializer(serializers.ModelSerializer):
     phone = serializers.SerializerMethodField()
+    vip_level = serializers.SerializerMethodField()
+    vip_since = serializers.SerializerMethodField()
+    total_invested = serializers.SerializerMethodField()
 
     class Meta:
         model = User
-        fields = ('id', 'username', 'first_name', 'email', 'phone')
+        fields = ('id', 'username', 'first_name', 'email', 'phone', 'vip_level', 'vip_since', 'total_invested')
 
     def get_phone(self, obj):
         try:
             return obj.investor.phone
         except Exception:
             return None
+
+    def get_vip_level(self, obj):
+        try:
+            return getattr(obj.investor, 'vip_level', 0)
+        except Exception:
+            return 0
+
+    def get_vip_since(self, obj):
+        try:
+            v = getattr(obj.investor, 'vip_since', None)
+            return v
+        except Exception:
+            return None
+
+    def get_total_invested(self, obj):
+        try:
+            return getattr(obj.investor, 'total_invested', 0)
+        except Exception:
+            return 0
 
 
 class MarketOfferSerializer(serializers.ModelSerializer):
@@ -30,28 +52,18 @@ class MarketOfferSerializer(serializers.ModelSerializer):
         )
 
 
-class VirtualOfferSerializer(serializers.Serializer):
-    id = serializers.CharField()
-    amount_requested = serializers.DecimalField(max_digits=20, decimal_places=2)
-    price_offered = serializers.DecimalField(max_digits=20, decimal_places=2)
-    surplus = serializers.DecimalField(max_digits=20, decimal_places=2)
-    expires_at = serializers.DateTimeField()
-    buyer_label = serializers.CharField()
-    source = serializers.CharField(default='virtual')
-
-
 class WalletSerializer(serializers.ModelSerializer):
     user = UserSerializer(read_only=True)
 
     class Meta:
         model = Wallet
-        fields = ('id', 'user', 'currency', 'available', 'pending', 'gains', 'sale_balance')
+        fields = ('id', 'user', 'currency', 'available', 'pending', 'gains', 'sale_balance', 'invested')
 
 
 class InvestorSerializer(serializers.ModelSerializer):
     class Meta:
         model = Investor
-        fields = ('phone', 'total_invested', 'portfolio_value')
+        fields = ('phone', 'total_invested', 'portfolio_value', 'vip_level', 'vip_since')
 
 
 class DepositSerializer(serializers.ModelSerializer):
@@ -67,6 +79,15 @@ class TransactionSerializer(serializers.ModelSerializer):
         fields = ('id', 'wallet', 'amount', 'type', 'created_at')
 
 
+class InvestmentSerializer(serializers.ModelSerializer):
+    user = UserSerializer(read_only=True)
+    wallet = WalletSerializer(read_only=True)
+
+    class Meta:
+        model = __import__('api.models', fromlist=['Investment']).Investment
+        fields = ('id', 'user', 'wallet', 'amount', 'daily_rate', 'accrued', 'last_accrual', 'created_at', 'active')
+
+
 class TradeSerializer(serializers.ModelSerializer):
     class Meta:
         model = __import__('api.models', fromlist=['Trade']).Trade
@@ -78,16 +99,6 @@ class ReferralCodeSerializer(serializers.ModelSerializer):
         model = __import__('api.models', fromlist=['ReferralCode']).ReferralCode
         fields = ('id', 'code', 'referrer', 'created_at')
 
-
-class BuyerSerializer(serializers.Serializer):
-    """Representation for an aggregated buyer entry (virtual or real)."""
-    label = serializers.CharField()
-    source = serializers.CharField()
-    total_offers = serializers.IntegerField(required=False)
-    total_trades = serializers.IntegerField(required=False)
-    avg_price = serializers.DecimalField(max_digits=20, decimal_places=2, required=False, allow_null=True)
-    last_offer = MarketOfferSerializer(required=False, allow_null=True)
-    last_trade = TradeSerializer(required=False, allow_null=True)
 
 
 class ReferralSerializer(serializers.ModelSerializer):

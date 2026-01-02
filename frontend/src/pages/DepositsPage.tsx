@@ -1,5 +1,18 @@
 import React, { useState, useEffect } from 'react'
+import { useLocation } from 'react-router-dom'
 import api from '../services/api'
+
+// fetch user's wallets to determine default currency
+let fetchWallets: any = null
+try {
+  // dynamic import to avoid circular deps
+  fetchWallets = require('../services/investments').fetchWallets
+} catch (e) {
+  try {
+    // fallback dynamic import
+    import('../services/investments').then(m => { fetchWallets = m.fetchWallets })
+  } catch (e) {}
+}
 
 export default function DepositsPage() {
   const [amount, setAmount] = useState('')
@@ -7,8 +20,43 @@ export default function DepositsPage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [result, setResult] = useState<any>(null)
+  const [amountLocked, setAmountLocked] = useState(false)
+  const [currency, setCurrency] = useState<string>('CDF')
 
   const isValid = Number(amount) > 0 && method
+
+  useEffect(() => {
+    // read optional ?amount= from query string to prefill
+    try {
+      const loc = window.location.search
+      const p = new URLSearchParams(loc)
+      const a = p.get('amount')
+      if (a) setAmount(String(a))
+    } catch (e) {}
+  }, [])
+
+  useEffect(() => {
+    let mounted = true
+    if (fetchWallets) {
+      try {
+        fetchWallets().then((data: any) => {
+          if (!mounted) return
+          if (Array.isArray(data) && data.length > 0) setCurrency(data[0].currency || 'CDF')
+        }).catch(() => {})
+      } catch (e) {}
+    }
+    return () => { mounted = false }
+  }, [])
+
+  useEffect(() => {
+    // if amount was provided via query param, lock the field
+    try {
+      const loc = window.location.search
+      const p = new URLSearchParams(loc)
+      const a = p.get('amount')
+      if (a) setAmountLocked(true)
+    } catch (e) {}
+  }, [])
 
   async function initiate() {
     if (!isValid) return
@@ -19,7 +67,7 @@ export default function DepositsPage() {
       const res = await api.post('/deposits/initiate', {
         amount: Number(amount),
         method,
-        currency: 'XAF',
+        currency: currency || 'CDF',
       })
       setResult(res.data)
     } catch (e: any) {
@@ -38,8 +86,9 @@ export default function DepositsPage() {
           <label className="block text-sm font-medium mb-1">Montant</label>
           <input
             value={amount}
-            onChange={(e) => setAmount(e.target.value)}
-            className="w-full border rounded-lg p-2"
+            onChange={(e) => { if (!amountLocked) setAmount(e.target.value) }}
+            readOnly={amountLocked}
+            className={`w-full border rounded-lg p-2 ${amountLocked ? 'bg-gray-100 cursor-not-allowed' : ''}`}
           />
         </div>
 

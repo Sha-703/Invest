@@ -71,7 +71,7 @@ export default function PortefeuillePage() {
   )
 
   const totalSale = wallets.reduce(
-    (acc: number, w: any) => acc + Number(w.sale_balance || 0),
+    (acc: number, w: any) => acc + Number(w.invested || 0),
     0
   )
 
@@ -127,7 +127,7 @@ export default function PortefeuillePage() {
       const res = await api.post('/deposits/initiate', {
         amount: Number(depositAmount),
         method,
-        currency: 'XAF',
+        currency: mainWallet?.currency || 'XAF',
       })
 
       setDepositResult(res.data)
@@ -158,18 +158,18 @@ export default function PortefeuillePage() {
         <h3 className="text-sm font-medium text-gray-600">Mes Fonds</h3>
 
         <div className="mt-3 text-3xl font-bold text-gray-900">
-          {totalAvailable.toLocaleString()} CDF
+          {totalAvailable.toLocaleString()} {mainWallet?.currency || 'CDF'}
           <div className="text-xs text-gray-500">Solde principal</div>
         </div>
 
         <div className="mt-4 flex justify-between text-sm">
           <div>
             <div className="text-gray-500">Gains</div>
-            <div className="font-semibold">{totalGains.toLocaleString()} CDF</div>
+            <div className="font-semibold">{totalGains.toLocaleString()} {mainWallet?.currency || 'CDF'}</div>
           </div>
           <div>
-            <div className="text-gray-500">Solde de vente</div>
-            <div className="font-semibold">{totalSale.toLocaleString()} CDF</div>
+              <div className="text-gray-500">Solde investi</div>
+              <div className="font-semibold">{totalSale.toLocaleString()} {mainWallet?.currency || 'CDF'}</div>
           </div>
         </div>
       </section>
@@ -210,7 +210,7 @@ export default function PortefeuillePage() {
             className="rounded-xl border px-3 py-2 text-sm"
           >
             <option value="gains">Gains</option>
-            <option value="sale">Solde de vente</option>
+            <option value="sale">Solde investi</option>
           </select>
 
           <input

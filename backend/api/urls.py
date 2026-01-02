@@ -13,10 +13,12 @@ urlpatterns = [
     # market endpoints matching frontend expectations
     path('market/offers', views.MarketOfferViewSet.as_view({'get': 'list'}), name='market-offers-list'),
     path('market/offers/<int:pk>', views.MarketOfferViewSet.as_view({'get': 'retrieve'}), name='market-offers-detail'),
-    path('market/virtual-offers', views.VirtualOffersView.as_view(), name='market-virtual-offers'),
-    path('market/buyers', views.BuyersListView.as_view(), name='market-buyers'),
-    path('market/virtual-offers/<int:pk>/accept', views.AcceptVirtualOfferView.as_view(), name='market-virtual-accept'),
+    # virtual buyer endpoints removed
     path('referrals/me', views.ReferralsMeView.as_view(), name='referrals-me'),
+    # investments
+    path('investments', views.InvestmentViewSet.as_view({'get': 'list', 'post': 'create'}), name='investments-list'),
+    path('investments/<int:pk>/accrue', views.InvestmentViewSet.as_view({'post': 'accrue'}), name='investments-accrue'),
+    path('investments/<int:pk>/encash', views.InvestmentViewSet.as_view({'post': 'encash'}), name='investments-encash'),
 
     # deposits
     path('deposits/initiate', views.DepositViewSet.as_view({'post': 'initiate'}), name='deposits-initiate'),
@@ -28,6 +30,7 @@ urlpatterns = [
     path('auth/refresh', views.RefreshTokenFromCookieView.as_view(), name='auth-refresh'),
     path('auth/logout', views.LogoutView.as_view(), name='auth-logout'),
     path('me', views.MeView.as_view(), name='me'),
+    # admin recompute VIP endpoint removed
     path('auth/register-email/', views.RegisterEmailView.as_view(), name='auth-register-email'),
     path('auth/verify-email/<uidb64>/<token>/', views.VerifyEmailView.as_view(), name='auth-verify-email'),
     path('auth/set-password/', views.SetPasswordView.as_view(), name='auth-set-password'),

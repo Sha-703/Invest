@@ -36,6 +36,7 @@ class Wallet(models.Model):
     pending = models.DecimalField('en attente', max_digits=20, decimal_places=2, default=0)
     gains = models.DecimalField('gains', max_digits=20, decimal_places=2, default=0)
     sale_balance = models.DecimalField('solde de vente', max_digits=20, decimal_places=2, default=0)
+    invested = models.DecimalField('solde investi', max_digits=20, decimal_places=2, default=0)
 
     class Meta:
         verbose_name = 'portefeuille'
@@ -50,6 +51,8 @@ class Investor(models.Model):
     phone = models.CharField('téléphone', max_length=32, blank=True, null=True)
     total_invested = models.DecimalField('total investi', max_digits=20, decimal_places=2, default=0)
     portfolio_value = models.DecimalField('valeur du portefeuille', max_digits=20, decimal_places=2, default=0)
+    vip_level = models.IntegerField('niveau VIP', default=0)
+    vip_since = models.DateTimeField('VIP depuis', null=True, blank=True)
     created_at = models.DateTimeField('date de création', auto_now_add=True)
 
     class Meta:
@@ -67,6 +70,8 @@ class Transaction(models.Model):
         ('trade', 'Échange'),
         ('referral', 'Parrainage'),
         ('transfer', 'Transfert'),
+        ('interest', 'Intérêt'),
+        ('encash', 'Encaissement'),
     )
 
     wallet = models.ForeignKey(Wallet, verbose_name='portefeuille', on_delete=models.CASCADE, related_name='transactions')
@@ -172,3 +177,46 @@ class ReferralReward(models.Model):
 
     def __str__(self):
         return f"Reward {self.id} {self.amount} for referral {self.referral_id}"
+
+
+class Investment(models.Model):
+    """Represents a user's locked investment which accrues daily interest.
+
+    The backend will not automatically move funds back to `available` unless
+    an accrual or a withdrawal action is performed. Daily rate is stored as
+    a decimal (e.g. 0.025 for 2.5% daily) to allow flexibility.
+    """
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, verbose_name='utilisateur', on_delete=models.CASCADE, related_name='investments')
+    wallet = models.ForeignKey(Wallet, verbose_name='portefeuille', on_delete=models.CASCADE, related_name='investments')
+    amount = models.DecimalField('montant investi', max_digits=20, decimal_places=2)
+    daily_rate = models.DecimalField('taux journalier', max_digits=10, decimal_places=6, default=0.025)
+    last_accrual = models.DateTimeField('dernière capitalisation', null=True, blank=True)
+    # accrued interest not yet encashed for this investment
+    accrued = models.DecimalField('intérêts accumulés', max_digits=20, decimal_places=2, default=0)
+    created_at = models.DateTimeField('date de création', auto_now_add=True)
+    active = models.BooleanField('actif', default=True)
+
+    class Meta:
+        verbose_name = 'investissement'
+        verbose_name_plural = 'investissements'
+
+    def __str__(self):
+        return f"Investment {self.id} {self.user} {self.amount} @ {self.daily_rate}"
+
+
+class HiddenOffer(models.Model):
+    """Mark a MarketOffer as hidden for a specific user until a given datetime.
+
+    If `user` is null, the hidden marker is global (applies to all users).
+    """
+    offer = models.ForeignKey(MarketOffer, verbose_name='offre', on_delete=models.CASCADE, related_name='hidden_entries')
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, verbose_name='utilisateur', on_delete=models.CASCADE, null=True, blank=True, related_name='hidden_offers')
+    hidden_until = models.DateTimeField('masqué jusqu\'à')
+    created_at = models.DateTimeField('date de création', auto_now_add=True)
+
+    class Meta:
+        verbose_name = 'offre masquée'
+        verbose_name_plural = 'offres masquées'
+
+    def __str__(self):
+        return f"HiddenOffer offer={self.offer_id} user={self.user_id} until={self.hidden_until}"

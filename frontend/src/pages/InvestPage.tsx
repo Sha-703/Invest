@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 //import { useNotify } from '../hooks/useNotify'
 import BottomNav from '../components/BottomNav'
 import HeaderActions from '../components/HeaderActions'
@@ -21,16 +21,45 @@ const investments = [
 export default function InvestPage() {
   const [selected, setSelected] = useState<any>(null)
   const [loading, setLoading] = useState(false)
+  const [wallet, setWallet] = useState<any>(null)
+  const [availableInvestments, setAvailableInvestments] = useState<any[]>(investments)
+
+  useEffect(() => {
+    // fetch wallets to display invested/available balances
+    let mounted = true
+    import('../services/investments').then(({ fetchWallets }) => {
+      fetchWallets().then((data: any) => {
+        if (!mounted) return
+        // API returns list of wallets; take first
+        if (Array.isArray(data) && data.length > 0) setWallet(data[0])
+      }).catch(() => {})
+    })
+    return () => { mounted = false }
+  }, [])
 
   function confirmInvestment() {
     if (!selected) return
     setLoading(true)
-
-    setTimeout(() => {
-      console.log('Investissement confirmé :', selected)
-      setLoading(false)
-      setSelected(null)
-    }, 1000)
+    // call backend to create investment
+    import('../services/investments').then(({ createInvestment, fetchWallets }) => {
+      createInvestment(selected.price)
+        .then(() => {
+          // refresh wallet
+          return fetchWallets()
+        })
+        .then((data: any) => {
+          if (Array.isArray(data) && data.length > 0) setWallet(data[0])
+          // remove invested item from market list so it disappears
+          setAvailableInvestments(prev => prev.filter(it => it.id !== selected.id))
+          setLoading(false)
+          setSelected(null)
+        })
+        .catch((err: any) => {
+          console.error('invest error', err)
+          try { alert(err.response?.data?.message || err.message || 'Erreur') } catch (e) {}
+          setLoading(false)
+        })
+    }).catch((e) => { setLoading(false); console.error(e) })
   }
 
   return (
@@ -48,13 +77,16 @@ export default function InvestPage() {
           <HeaderActions />
         </div>
 
-        <h2 className="text-lg font-medium mb-3">
-          Propositions d’investissements
-        </h2>
+        <div className="mb-3">
+          <h2 className="text-lg font-medium">Propositions d’investissements</h2>
+          {wallet && (
+            <p className="text-sm text-gray-600">Solde disponible: <strong>{Number(wallet.available).toLocaleString()} {wallet.currency}</strong> — Solde investi: <strong>{Number(wallet.invested).toLocaleString()} {wallet.currency}</strong></p>
+          )}
+        </div>
 
         {/* Investment cards */}
         <div className="space-y-4">
-          {investments.map(inv => (
+          {availableInvestments.map(inv => (
             <div
               key={inv.id}
               className="bg-white rounded-2xl p-4 shadow-sm flex items-center justify-between"
@@ -71,7 +103,7 @@ export default function InvestPage() {
 
               <div className="text-right">
                 <p className="text-lg font-bold text-gray-800">
-                  {inv.price.toLocaleString()} FC
+                  {inv.price.toLocaleString()} {wallet?.currency || 'CDF'}
                 </p>
                 <button
                   onClick={() => setSelected(inv)}
@@ -101,7 +133,7 @@ export default function InvestPage() {
               <p className="text-sm text-gray-600">
                 Montant :{' '}
                 <span className="font-semibold">
-                  {selected.price.toLocaleString()} FC
+                  {selected.price.toLocaleString()} {wallet?.currency || 'CDF'}
                 </span>
               </p>
             </div>

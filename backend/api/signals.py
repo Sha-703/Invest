@@ -6,6 +6,7 @@ from django.utils import timezone
 from django.db import transaction
 
 from .models import Deposit, Referral, ReferralReward, Wallet, Transaction
+from .utils import recompute_vip_for_user
 
 
 @receiver(post_save, sender=Deposit)
@@ -52,6 +53,13 @@ def handle_deposit_completed(sender, instance: Deposit, created, **kwargs):
                 referral.status = 'used'
                 referral.used_at = timezone.now()
                 referral.save()
+                # After a deposit completes (and referral reward processed), recompute VIP
+                try:
+                    # use portfolio basis if configured in settings
+                    recompute_vip_for_user(instance.user)
+                except Exception:
+                    # don't break deposit processing on VIP recompute errors
+                    pass
     except Exception:
         # avoid crashing on errors in signal
         return

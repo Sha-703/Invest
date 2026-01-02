@@ -1,14 +1,17 @@
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { useAuth } from '../hooks/useAuth'
 import { useQuery } from '@tanstack/react-query'
 import { fetchMyReferrals } from '../services/referrals'
+import('../services/investments')
 import { useNotify } from '../hooks/useNotify'
 import { useNavigate } from 'react-router-dom'
 import BottomNav from '../components/BottomNav'
 import HeaderActions from '../components/HeaderActions'
+import api from '../services/api'
 
 export default function DashboardPage() {
   const { user } = useAuth()
+  const [wallet, setWallet] = useState<any>(null)
   const notify = useNotify()
   const navigate = useNavigate()
 
@@ -21,14 +24,30 @@ export default function DashboardPage() {
     ? `${window.location.origin}/register?ref=${code}`
     : ''
 
+  useEffect(() => {
+    let mounted = true
+    import('../services/investments').then(({ fetchWallets }) => {
+      fetchWallets().then((data: any) => {
+        if (!mounted) return
+        if (Array.isArray(data) && data.length > 0) setWallet(data[0])
+      }).catch(() => {})
+      // fetch user's investments as well
+      api.get('/investments').then((res: any) => {
+        if (!mounted) return
+        // API returns list of investments
+        setInvestments(res.data || [])
+      }).catch(() => {})
+    })
+    return () => { mounted = false }
+  }, [])
+
   /* ================= STATES ================= */
   const [showCompleteModal, setShowCompleteModal] = useState(false)
   const [showInvestModal, setShowInvestModal] = useState(false)
-  const [showGainModal, setShowGainModal] = useState(false)
   const [showVipModal, setShowVipModal] = useState(false)
+  const [investments, setInvestments] = useState<any[]>([])
 
   const [loadingComplete, setLoadingComplete] = useState(false)
-  const [loadingConfirmGain, setLoadingConfirmGain] = useState(false)
 
   /* ================= ACTIONS ================= */
   async function onCopy() {
@@ -79,6 +98,14 @@ export default function DashboardPage() {
             <div className="font-semibold">{user?.first_name || user?.username}</div>
             <div className="text-sm text-gray-500">{user?.phone ?? '+243 *********'} </div>
             <div className="text-sm text-gray-500">{user?.email}</div>
+            <div className="text-sm text-gray-600 mt-2">
+              <div>
+                Total investi: <strong>{Number(user?.total_invested || 0).toLocaleString()} {wallet?.currency || 'CDF'}</strong>
+              </div>
+              {wallet && (
+                <div>Solde investi: <strong>{Number(wallet.invested || 0).toLocaleString()} {wallet.currency}</strong></div>
+              )}
+            </div>
           </div>
           <button
             onClick={() => setShowVipModal(true)}
@@ -187,16 +214,44 @@ export default function DashboardPage() {
           <div className="bg-white rounded-2xl w-full max-w-md p-6 space-y-4">
             <h2 className="font-semibold text-lg">Mes investissements</h2>
 
-            <div className="border p-3 rounded-lg">
-              <div className="font-semibold">Plan Croissance Or</div>
-              <div className="text-sm text-gray-500">Gain journalier : 1 500 FC</div>
-              <button
-                onClick={() => setShowGainModal(true)}
-                className="mt-2 text-sm text-green-600 underline"
-              >
-                Encaisser
-              </button>
-            </div>
+            {investments.length > 0 ? (
+              investments.map((inv: any) => {
+                const amt = Number(inv.amount || 0)
+                const rate = Number(inv.daily_rate != null ? inv.daily_rate : (user?.vip_level ? 0.025 * Number(user.vip_level) : 0))
+                const daily = Math.round((amt * rate) * 100) / 100
+                return (
+                  <div key={inv.id} className="border p-3 rounded-lg mb-3">
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <div className="font-semibold">{inv.title || 'Investissement'}</div>
+                        <div className="text-sm text-gray-500">Investissement sécurisé</div>
+                        <div className="text-sm text-yellow-600">★★★★☆</div>
+                      </div>
+                      <div className="text-right">
+                        <div className="font-medium">{new Intl.NumberFormat('fr-FR').format(amt)} {wallet?.currency || 'CDF'}</div>
+                        <div className="text-sm text-gray-500">Taux: {(rate * 100).toFixed(2)}%</div>
+                      </div>
+                    </div>
+                    <div className="mt-2">
+                      <div className="text-sm text-gray-700">Gain journalier : <strong>{daily.toLocaleString()} {wallet?.currency || 'CDF'}</strong></div>
+                      <div className="text-sm text-green-700">Gains disponibles : <strong>{Number(inv.accrued || 0).toLocaleString()} {wallet?.currency || 'CDF'}</strong></div>
+                      <div className="text-xs text-gray-500 mt-1">Les gains sont transférés automatiquement vers le solde principal après 24h.</div>
+                    </div>
+                  </div>
+                )
+              })
+            ) : (
+              <div className="border p-3 rounded-lg">
+                <div className="font-semibold">Plan Croissance Or</div>
+                <div className="text-sm text-gray-500">Gain journalier : — {wallet?.currency || 'CDF'}</div>
+                <button
+                  onClick={() => { window.location.href = '/deposits' }}
+                  className="mt-2 text-sm text-green-600 underline"
+                >
+                  J'investis
+                </button>
+              </div>
+            )}
 
             <button
               onClick={() => setShowInvestModal(false)}
@@ -208,37 +263,43 @@ export default function DashboardPage() {
         </div>
       )}
 
-      {/* MODAL GAIN */}
-      {showGainModal && (
-        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center px-4">
-          <div className="bg-white rounded-2xl w-full max-w-md p-6 space-y-4">
-            <p>Voulez-vous encaisser vos gains journaliers ?</p>
-            <button
-              disabled={loadingConfirmGain}
-              onClick={async () => {
-                setLoadingConfirmGain(true)
-                await new Promise(res => setTimeout(res, 2000))
-                setLoadingConfirmGain(false)
-                setShowGainModal(false)
-                notify.success('Gains encaissés')
-              }}
-              className={`w-full py-2 rounded-lg text-white
-                ${loadingConfirmGain ? 'bg-green-300' : 'bg-green-600 hover:bg-green-700'}`}
-            >
-              {loadingConfirmGain ? 'Traitement...' : 'Confirmer'}
-            </button>
-          </div>
-        </div>
-      )}
+      {/* Encash removed: transfers happen automatically after 24h */}
 
       {/* MODAL VIP */}
       {showVipModal && (
         <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center px-4">
           <div className="bg-white rounded-2xl w-full max-w-md p-6 space-y-3">
             <h2 className="font-semibold text-lg">Niveaux VIP</h2>
-            {[...Array(10)].map((_, i) => (
-              <p key={i}>VIP {i + 1} – Avantages progressifs</p>
-            ))}
+            {/* helper: first threshold and doubling each level */}
+            {(() => {
+              const FIRST = 25000 // must match backend VIP_FIRST_THRESHOLD default
+              const fmt = (v: number) => new Intl.NumberFormat('fr-FR').format(v)
+              return [...Array(10)].map((_, i) => {
+                const level = i + 1
+                const amount = FIRST * Math.pow(2, i)
+                return (
+                  <button
+                    key={i}
+                    onClick={() => {
+                      // navigate to deposits page with prefilled amount
+                      try {
+                        // close modal then navigate
+                        // use window.location to preserve simple behavior
+                        window.location.href = `/deposits?amount=${amount}`
+                      } catch (e) {
+                        // fallback
+                        window.location.href = `/deposits?amount=${amount}`
+                      }
+                    }}
+                    className="w-full text-left flex justify-between items-center py-2 border-b last:border-b-0"
+                  >
+                    <div className="font-medium">VIP {level}</div>
+                    <div className="text-sm text-gray-600">{fmt(amount)} {wallet?.currency || 'CDF'}</div>
+                  </button>
+                )
+              })
+            })()}
+            <div className="text-sm text-gray-500">Avantages progressifs</div>
             <button
               onClick={() => setShowVipModal(false)}
               className="w-full py-2 bg-purple-600 text-white rounded-lg"
