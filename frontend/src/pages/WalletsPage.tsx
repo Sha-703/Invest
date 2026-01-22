@@ -7,6 +7,9 @@ import BottomNav from '../components/BottomNav'
 import { createCryptoDeposit } from '../services/deposits'
 import { createWithdrawal } from '../services/withdrawals'
 import logo from '../img/logo.png'
+import orangeLogo from '../img/Orange Monnaie.png'
+import airtelLogo from '../img/Airtel-Money-Logo-PNG.png'
+import mpesaLogo from '../img/M-pesa-logo.png'
 
 export default function PortefeuillePage() {
   const { data, isLoading, error, refetch } = useWallets()
@@ -43,9 +46,9 @@ export default function PortefeuillePage() {
   const [loadingTransfer, setLoadingTransfer] = useState(false)
 
   const operators = [
-    { id: 'ORANGE', label: 'Orange', logo: '🟧' },
-    { id: 'AIRTEL', label: 'Airtel', logo: '🔴' },
-    { id: 'MPESA', label: 'M-Pesa', logo: '🟢' },
+    { id: 'ORANGE', label: 'Orange', logo: orangeLogo },
+    { id: 'AIRTEL', label: 'Airtel', logo: airtelLogo },
+    { id: 'MPESA', label: 'M-Pesa', logo: mpesaLogo },
   ] as const
 
   const [amount, setAmount] = useState('')
@@ -332,7 +335,7 @@ export default function PortefeuillePage() {
                     : 'bg-gray-100'}
                 `}
               >
-                <span className="text-xl sm:text-2xl">{op.logo}</span>
+                <img src={op.logo} alt={op.label} className="w-10 h-10 sm:w-12 sm:h-12 object-contain" />
                 {op.label}
               </button>
             ))}
